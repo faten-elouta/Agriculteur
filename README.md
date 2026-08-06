@@ -18,6 +18,16 @@ L'interface Streamlit est alors disponible sur `http://localhost:8501`. Saisisse
 une commune puis cliquez sur « Chercher les parcelles » : le RPG, le sol
 (SoilGrids) et les stations Hub'Eau sont chargés en direct, sans clé API.
 
+## Démo en ligne
+
+- **Application** : https://terroir-context-agents.vercel.app (Streamlit, Vercel
+  Fluid Compute, proxy HTTP + WebSocket)
+- **Graphe de contexte DataHub** : https://terroir-context-gms.onrender.com
+  (serveur GMS-compatible, conteneurisé, qui expose le graphe d'exemple de 11
+  datasets — voir `render.yaml` et `gms/Dockerfile`)
+- **Exemple autonome** : `python examples/gms_demo.py` interroge le GMS public
+  (lecture, lineage, écriture de runs et d'incidents) avec la bibliothèque standard.
+
 ## Architecture
 
 Trois agents forment une boucle autour de DataHub :
