@@ -32,11 +32,15 @@ from fastapi.responses import JSONResponse
 ROOT = Path(__file__).resolve().parent.parent
 GRAPH_PATH = Path(__file__).resolve().parent.parent / "fixtures" / "graph.json"
 
-from gms.mcp_server import mcp as _mcp  # noqa: E402
+try:
+    from gms.mcp_server import mcp as _mcp  # noqa: E402
 
-_MCP_HTTP = _mcp.http_app(transport="streamable-http", allowed_origins=["*"])
+    _MCP_HTTP = _mcp.http_app(transport="streamable-http", allowed_origins=["*"])
+except ModuleNotFoundError:
+    _mcp = None
+    _MCP_HTTP = None
 
-app = FastAPI(title="Terroir Context Agents — GMS compatible (démo)", lifespan=_MCP_HTTP.lifespan)
+app = FastAPI(title="Terroir Context Agents — GMS compatible (démo)", lifespan=_MCP_HTTP.lifespan if _MCP_HTTP else None)
 
 _STORE: dict[str, dict[str, Any]] = {}
 _RELATIONSHIPS: dict[str, list[dict[str, str]]] = {}
@@ -220,4 +224,5 @@ async def incident_list() -> dict:
     }
 
 
-app.mount("/", _MCP_HTTP)
+if _MCP_HTTP is not None:
+    app.mount("/", _MCP_HTTP)
