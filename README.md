@@ -91,6 +91,32 @@ export DATAHUB_TOKEN=                          # token DataHub Platform (faculta
 .venv/bin/python catalog/ingest_datahub.py --dry-run   # affiche les payloads sans appel réseau
 ```
 
+## Serveur MCP (Model Context Protocol)
+
+Le serveur GMS expose le même graphe de contexte via **MCP** (streamable HTTP) à
+`https://terroir-context-gms.onrender.com/mcp` — l'agent peut lire le contexte
+(fraîcheur, SLA, lineage) et **écrire** dans le graphe (runs, incidents) :
+
+- 8 outils : `list_datasets`, `get_dataset`, `get_lineage`, `freshness_summary`,
+  `emit_run`, `create_incident`, `resolve_incident`, `list_incidents`
+- Agent autonome : `python examples/mcp_agent_demo.py` (boucle supervision :
+  source périmée → lineage aval → incident → run → résolution)
+- Brancher dans Claude Desktop / MCP Inspector :
+
+```json
+{
+  "mcpServers": {
+    "terroir": {
+      "url": "https://terroir-context-gms.onrender.com/mcp",
+      "transport": "streamable-http"
+    }
+  }
+}
+```
+
+Le serveur MCP partage l'état en mémoire du GMS : un incident créé par l'agent
+apparaît dans l'API OpenAPI (`/openapi/v3/entity/incident`) et inversement.
+
 Une fois connecté :
 
 - l'écran « D'où viennent ces chiffres ? » lit la **fraîcheur réelle des sources

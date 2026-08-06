@@ -13,6 +13,9 @@ Endpoints (contrat identique à DataHub GMS) :
 - POST /openapi/v3/entity/mlModel
 - POST /openapi/v3/entity/incident
 - POST /openapi/v3/entity/incident/{urn}
+
+En plus, le même graphe est exposé en Model Context Protocol (MCP) à /mcp :
+https://terroir-context-gms.onrender.com/mcp (voir gms/mcp_server.py).
 """
 
 from __future__ import annotations
@@ -29,7 +32,11 @@ from fastapi.responses import JSONResponse
 ROOT = Path(__file__).resolve().parent.parent
 GRAPH_PATH = Path(__file__).resolve().parent.parent / "fixtures" / "graph.json"
 
-app = FastAPI(title="Terroir Context Agents — GMS compatible (démo)")
+from gms.mcp_server import mcp as _mcp  # noqa: E402
+
+_MCP_HTTP = _mcp.http_app(transport="streamable-http", allowed_origins=["*"])
+
+app = FastAPI(title="Terroir Context Agents — GMS compatible (démo)", lifespan=_MCP_HTTP.lifespan)
 
 _STORE: dict[str, dict[str, Any]] = {}
 _RELATIONSHIPS: dict[str, list[dict[str, str]]] = {}
@@ -211,3 +218,6 @@ async def incident_list() -> dict:
             for urn, incident in _INCIDENTS.items()
         ]
     }
+
+
+app.mount("/", _MCP_HTTP)
