@@ -188,5 +188,273 @@ button[kind="primary"] p, [data-testid="stBaseButton-primary"] p { color:var(--p
   .frise-cursor { left:100%; }
   .st-key-om_screen { animation:none !important; }
 }
+
+/* ============================================================================
+   ANIMATION SYSTEM — 15 Animation Primitives
+   Applied via utility classes on st.markdown containers
+   ============================================================================ */
+
+:root {
+  --anim-duration-fast: 200ms;
+  --anim-duration-base: 400ms;
+  --anim-duration-slow: 700ms;
+  --anim-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --anim-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --anim-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 1. Masked Text Reveal — text appears through a moving mask */
+@keyframes maskReveal {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+.animate-mask-reveal {
+  display: inline-block;
+  animation: maskReveal var(--anim-duration-slow) var(--anim-ease-out) both;
+}
+.animate-mask-reveal-delay-1 { animation-delay: 100ms; }
+.animate-mask-reveal-delay-2 { animation-delay: 200ms; }
+.animate-mask-reveal-delay-3 { animation-delay: 300ms; }
+
+/* 2. Split-line Text Reveal — lines slide up from below */
+@keyframes splitLineReveal {
+  from { transform: translateY(110%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-split-line {
+  overflow: hidden;
+}
+.animate-split-line > * {
+  display: block;
+  animation: splitLineReveal var(--anim-duration-slow) var(--anim-ease-out) both;
+}
+.animate-split-line > *:nth-child(1) { animation-delay: 0ms; }
+.animate-split-line > *:nth-child(2) { animation-delay: 80ms; }
+.animate-split-line > *:nth-child(3) { animation-delay: 160ms; }
+.animate-split-line > *:nth-child(4) { animation-delay: 240ms; }
+.animate-split-line > *:nth-child(5) { animation-delay: 320ms; }
+
+/* 3. Fade-up on Scroll (IntersectionObserver via JS) */
+.animate-fade-up {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity var(--anim-duration-slow) var(--anim-ease-out),
+              transform var(--anim-duration-slow) var(--anim-ease-out);
+}
+.animate-fade-up.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.animate-fade-up-delay-1 { transition-delay: 100ms; }
+.animate-fade-up-delay-2 { transition-delay: 200ms; }
+.animate-fade-up-delay-3 { transition-delay: 300ms; }
+.animate-fade-up-delay-4 { transition-delay: 400ms; }
+
+/* 4. Staggered Scroll Reveal — children animate in sequence */
+.animate-stagger > * {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity var(--anim-duration-base) var(--anim-ease-out),
+              transform var(--anim-duration-base) var(--anim-ease-out);
+}
+.animate-stagger.is-visible > *:nth-child(1)  { transition-delay: 0ms;   }
+.animate-stagger.is-visible > *:nth-child(2)  { transition-delay: 60ms;  }
+.animate-stagger.is-visible > *:nth-child(3)  { transition-delay: 120ms; }
+.animate-stagger.is-visible > *:nth-child(4)  { transition-delay: 180ms; }
+.animate-stagger.is-visible > *:nth-child(5)  { transition-delay: 240ms; }
+.animate-stagger.is-visible > *:nth-child(6)  { transition-delay: 300ms; }
+.animate-stagger.is-visible > *:nth-child(7)  { transition-delay: 360ms; }
+.animate-stagger.is-visible > *:nth-child(8)  { transition-delay: 420ms; }
+.animate-stagger.is-visible > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 5. Vertical Image Mask Reveal — image uncovered top to bottom */
+@keyframes verticalMaskReveal {
+  from { clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%); }
+  to { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+}
+.animate-vertical-mask {
+  overflow: hidden;
+}
+.animate-vertical-mask > img,
+.animate-vertical-mask > .image-wrapper {
+  animation: verticalMaskReveal var(--anim-duration-slow) var(--anim-ease-out) both;
+}
+
+/* 6. Image Scale-down Reveal — zoom out from 1.15x to 1x */
+@keyframes scaleDownReveal {
+  from { transform: scale(1.15); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.animate-scale-down {
+  overflow: hidden;
+}
+.animate-scale-down > img,
+.animate-scale-down > .image-wrapper {
+  animation: scaleDownReveal 1s var(--anim-ease-out) both;
+}
+
+/* 7. Subtle Image Parallax — slight translate on scroll */
+.parallax-container {
+  overflow: hidden;
+}
+.parallax-image {
+  transition: transform 0.1s linear;
+  will-change: transform;
+}
+
+/* 8. Image Zoom on Hover — gentle scale on hover */
+.animate-zoom-hover {
+  overflow: hidden;
+}
+.animate-zoom-hover > img,
+.animate-zoom-hover > .image-wrapper {
+  transition: transform var(--anim-duration-slow) var(--anim-ease);
+}
+.animate-zoom-hover:hover > img,
+.animate-zoom-hover:hover > .image-wrapper {
+  transform: scale(1.04);
+}
+
+/* 9. Card Hover Micro-interaction — lift + shadow + border */
+.animate-card-hover {
+  transition: transform var(--anim-duration-fast) var(--anim-ease),
+              box-shadow var(--anim-duration-fast) var(--anim-ease),
+              border-color var(--anim-duration-fast) var(--anim-ease);
+}
+.animate-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(15,23,20,.12), 0 4px 16px rgba(15,23,20,.08);
+  border-color: var(--eau);
+}
+
+/* 10. Arrow Slide on Hover — icon slides right */
+.animate-arrow-slide {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.animate-arrow-slide .arrow {
+  transition: transform var(--anim-duration-fast) var(--anim-ease);
+}
+.animate-arrow-slide:hover .arrow {
+  transform: translateX(6px);
+}
+
+/* 11. Animated Underline — expands from center */
+.animated-underline {
+  position: relative;
+  text-decoration: none;
+}
+.animated-underline::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  transition: width var(--anim-duration-base) var(--anim-ease),
+              left var(--anim-duration-base) var(--anim-ease);
+}
+.animated-underline:hover::after {
+  width: 100%;
+  left: 0;
+}
+
+/* 12. Horizontal Divider Reveal — line draws from center */
+@keyframes dividerReveal {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.animate-divider {
+  position: relative;
+  overflow: hidden;
+}
+.animate-divider::before {
+  content: "";
+  display: block;
+  height: 1px;
+  background: currentColor;
+  transform-origin: center;
+  animation: dividerReveal var(--anim-duration-slow) var(--anim-ease-out) both;
+}
+
+/* 13. Count-up Animation — numbers count up (CSS shows final value, JS for actual counting) */
+@keyframes countUp {
+  from { --count: 0; }
+  to { --count: var(--target); }
+}
+.animate-count-up {
+  --target: 100;
+  animation: countUp var(--anim-duration-slow) var(--anim-ease-out) both;
+}
+
+/* 14. Page-load Intro Sequence — orchestrates multiple animations */
+.page-intro {
+  opacity: 0;
+  animation: pageIntro var(--anim-duration-slow) var(--anim-ease-out) forwards;
+}
+@keyframes pageIntro {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.page-intro > *:nth-child(1) { animation: maskReveal 600ms var(--anim-ease-out) 100ms both; }
+.page-intro > *:nth-child(2) { animation: maskReveal 600ms var(--anim-ease-out) 200ms both; }
+.page-intro > *:nth-child(3) { animation: maskReveal 600ms var(--anim-ease-out) 300ms both; }
+.page-intro > *:nth-child(4) { animation: maskReveal 600ms var(--anim-ease-out) 400ms both; }
+
+/* 15. Smooth Page Fade Transition — for multi-step flows */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateX(20px);
+}
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity var(--anim-duration-base) var(--anim-ease),
+              transform var(--anim-duration-base) var(--anim-ease);
+}
+.page-transition-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+.page-transition-exit-active {
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity var(--anim-duration-fast) var(--anim-ease),
+              transform var(--anim-duration-fast) var(--anim-ease);
+}
+
+/* Reduced motion support for new animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-mask-reveal,
+  .animate-split-line > *,
+  .animate-fade-up,
+  .animate-stagger > *,
+  .animate-vertical-mask > *,
+  .animate-scale-down > *,
+  .animate-zoom-hover > *,
+  .animate-card-hover,
+  .animate-arrow-slide .arrow,
+  .animated-underline::after,
+  .animate-divider::before,
+  .animate-count-up,
+  .page-intro,
+  .page-transition-enter-active,
+  .page-transition-exit-active {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .animate-fade-up,
+  .animate-stagger > * {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
 </style>
 """
