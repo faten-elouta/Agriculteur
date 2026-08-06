@@ -1,0 +1,125 @@
+{
+  "datasets": {
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,hubeau_hydrometrie,PROD)": {
+      "niveau_de_preuve": "mesure",
+      "freshness_sla_days": "5",
+      "last_updated": "2026-07-29",
+      "spatial_coverage": "Nouvel Espace Cher",
+      "licence": "Licence Ouverte / Etalab 2.0",
+      "redistribuable": "oui"
+    },
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,hubeau_piezometrie,PROD)": {
+      "niveau_de_preuve": "mesure",
+      "freshness_sla_days": "15",
+      "last_updated": "2026-07-28",
+      "spatial_coverage": "Nouvel Espace Cher",
+      "licence": "Licence Ouverte / Etalab 2.0",
+      "redistribuable": "oui"
+    },
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,hubeau_onde,PROD)": {
+      "niveau_de_preuve": "mesure",
+      "freshness_sla_days": "30",
+      "last_updated": "2026-07-15",
+      "spatial_coverage": "Nouvel Espace Cher",
+      "licence": "Licence Ouverte / Etalab 2.0",
+      "redistribuable": "oui"
+    },
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,prevision_saisonniere,PROD)": {
+      "niveau_de_preuve": "modelisation",
+      "freshness_sla_days": "35",
+      "last_updated": "2026-07-01",
+      "spatial_coverage": "Nouvel Espace Cher",
+      "licence": "Snapshot synthetique derive de statistiques publiques",
+      "redistribuable": "oui (synthetique)"
+    },
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,climat_journalier,PROD)": {
+      "niveau_de_preuve": "modelisation",
+      "freshness_sla_days": "10",
+      "last_updated": "2026-07-27",
+      "spatial_coverage": "Nouvel Espace Cher",
+      "licence": "Snapshot synthetique derive de normales publiques",
+      "redistribuable": "oui (synthetique)"
+    },
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,sol_rrp,PROD)": {
+      "niveau_de_preuve": "modelisation",
+      "freshness_sla_days": "3650",
+      "last_updated": "2026-01-01",
+      "spatial_coverage": "Nouvel Espace Cher",
+      "licence": "Snapshot synthetique derive du referentiel pedologique public",
+      "redistribuable": "oui (synthetique)"
+    },
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,parcelles,PROD)": {
+      "niveau_de_preuve": "modelisation",
+      "freshness_sla_days": "365",
+      "last_updated": "2026-03-01",
+      "spatial_coverage": "Nouvel Espace Cher",
+      "licence": "Parcelles fictives",
+      "redistribuable": "oui (synthetique)"
+    },
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,ref_agro_economique,PROD)": {
+      "niveau_de_preuve": "dire_d_expert",
+      "freshness_sla_days": "400",
+      "last_updated": "2025-11-15",
+      "spatial_coverage": "France metropolitaine",
+      "licence": "Compilation de baremes publics",
+      "redistribuable": "oui"
+    },
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,features_bilan_hydrique,PROD)": {
+      "niveau_de_preuve": "modelisation",
+      "freshness_sla_days": "2",
+      "last_updated": "2026-07-29",
+      "spatial_coverage": "Nouvel Espace Cher",
+      "licence": "Produit du pipeline",
+      "redistribuable": "oui"
+    },
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,scenarios_cultures,PROD)": {
+      "niveau_de_preuve": "modelisation",
+      "freshness_sla_days": "2",
+      "last_updated": "2026-07-29",
+      "spatial_coverage": "Nouvel Espace Cher",
+      "licence": "Produit du pipeline",
+      "redistribuable": "oui"
+    },
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,recommandations_parcelle,PROD)": {
+      "niveau_de_preuve": "modelisation",
+      "freshness_sla_days": "2",
+      "last_updated": "2026-07-30",
+      "spatial_coverage": "Nouvel Espace Cher",
+      "licence": "Produit du pipeline",
+      "redistribuable": "oui"
+    }
+  },
+  "lineage": {
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,climat_journalier,PROD)": [
+      "urn:li:dataset:(urn:li:dataPlatform:duckdb,features_bilan_hydrique,PROD)"
+    ],
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,prevision_saisonniere,PROD)": [
+      "urn:li:dataset:(urn:li:dataPlatform:duckdb,features_bilan_hydrique,PROD)"
+    ],
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,sol_rrp,PROD)": [
+      "urn:li:dataset:(urn:li:dataPlatform:duckdb,features_bilan_hydrique,PROD)"
+    ],
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,parcelles,PROD)": [
+      "urn:li:dataset:(urn:li:dataPlatform:duckdb,features_bilan_hydrique,PROD)"
+    ],
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,hubeau_hydrometrie,PROD)": [
+      "urn:li:dataset:(urn:li:dataPlatform:duckdb,features_bilan_hydrique,PROD)"
+    ],
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,hubeau_piezometrie,PROD)": [
+      "urn:li:dataset:(urn:li:dataPlatform:duckdb,features_bilan_hydrique,PROD)"
+    ],
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,hubeau_onde,PROD)": [
+      "urn:li:dataset:(urn:li:dataPlatform:duckdb,features_bilan_hydrique,PROD)"
+    ],
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,features_bilan_hydrique,PROD)": [
+      "urn:li:dataset:(urn:li:dataPlatform:duckdb,scenarios_cultures,PROD)",
+      "urn:li:mlModel:(urn:li:dataPlatform:duckdb,gr4j_cher_v1,PROD)"
+    ],
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,ref_agro_economique,PROD)": [
+      "urn:li:dataset:(urn:li:dataPlatform:duckdb,scenarios_cultures,PROD)"
+    ],
+    "urn:li:dataset:(urn:li:dataPlatform:duckdb,scenarios_cultures,PROD)": [
+      "urn:li:dataset:(urn:li:dataPlatform:duckdb,recommandations_parcelle,PROD)"
+    ]
+  }
+}
