@@ -150,6 +150,16 @@ async def api_health() -> dict:
     return info
 
 
+@app.get("/api/logs")
+async def api_logs(lines: int = 80) -> Response:
+    """Tail du log du sous-process Streamlit (diagnostic)."""
+    try:
+        content = LOG_FILE.read_text(errors="replace").splitlines()
+        return Response(content="\n".join(content[-lines:]), media_type="text/plain")
+    except Exception as exc:
+        return Response(content=f"log indisponible: {exc}", status_code=500)
+
+
 @app.websocket("/_stcore/{rest:path}")
 async def streamlit_ws(websocket: WebSocket, rest: str) -> None:
     """Proxifie le canal WebSocket de Streamlit vers le serveur interne."""

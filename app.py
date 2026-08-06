@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from datetime import date
 from pathlib import Path
 
@@ -252,6 +253,20 @@ def render_question_screen(graph: dict, culture_specs: list[dict]) -> None:
         get_datahub_client().emit_run(RECO_URN, "SUCCESS", summary)
 
 
+def archive_report(result: dict, simulated_by_culture: dict) -> None:
+    """Génère et archive le rapport (callback on_click : exécuté avant le rerun)."""
+    report = build_comparison_report(result, simulated_by_culture)
+    try:
+        report_path = save_report(report, ROOT / "reports", date(2026, 7, 30))
+        archive_dir = ROOT / "reports"
+    except OSError:
+        report_path = save_report(report, tempfile.gettempdir(), date(2026, 7, 30))
+        archive_dir = Path(tempfile.gettempdir())
+    st.session_state.last_report = report
+    st.session_state.last_report_path = str(report_path)
+    st.session_state.last_report_dir = str(archive_dir)
+
+
 def render_answer_screen(result: dict) -> None:
     """Écran 2 — La réponse : confiance, calendrier, analyse et chiffrage."""
     st.markdown(screen_kicker_html("LA RÉPONSE"), unsafe_allow_html=True)
@@ -318,11 +333,10 @@ def render_answer_screen(result: dict) -> None:
     st.markdown('<div class="report-subhead">Rapport de comparaison</div>', unsafe_allow_html=True)
     report_action_col, report_download_col = st.columns(2)
     with report_action_col:
-        if st.button("Générer et archiver le rapport", width="stretch"):
-            report = build_comparison_report(result, simulated_by_culture)
-            report_path = save_report(report, ROOT / "reports", date(2026, 7, 30))
-            st.session_state.last_report = report
-            st.session_state.last_report_path = str(report_path)
+        if st.session_state.get("last_report"):
+            st.success("Rapport archivé — le CSV est prêt à droite.")
+        else:
+            st.button("Générer et archiver le rapport", width="stretch", on_click=archive_report, args=(result, simulated_by_culture))
     with report_download_col:
         if st.session_state.get("last_report"):
             st.download_button(
@@ -332,8 +346,6 @@ def render_answer_screen(result: dict) -> None:
                 mime="text/csv",
                 width="stretch",
             )
-    if st.session_state.get("last_report_path"):
-        st.caption(f"Dernier rapport archivé : {st.session_state.last_report_path}")
     st.markdown('</div>', unsafe_allow_html=True)
 
 
