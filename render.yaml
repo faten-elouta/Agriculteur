@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: terroir-context-gms
+    runtime: docker
+    repo: https://github.com/faten-elouta/Agriculteur
+    dockerfilePath: gms/Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000

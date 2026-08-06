@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+reports/
+.claude/
+.git/
+nixpacks.toml
+Makefile
+data/demo_cultures.json
+data/demo_parcels.json
+*.log

@@ -2,7 +2,18 @@
 
 CSS = r"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@font-face { font-family:"IBM Plex Sans"; font-style:normal; font-weight:400; font-display:swap; src:url('/app/static/fonts/IBMPlexSans-400-latin.woff2') format('woff2'); unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family:"IBM Plex Sans"; font-style:normal; font-weight:400; font-display:swap; src:url('/app/static/fonts/IBMPlexSans-400-latinext.woff2') format('woff2'); unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family:"IBM Plex Sans"; font-style:normal; font-weight:500; font-display:swap; src:url('/app/static/fonts/IBMPlexSans-500-latin.woff2') format('woff2'); unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family:"IBM Plex Sans"; font-style:normal; font-weight:500; font-display:swap; src:url('/app/static/fonts/IBMPlexSans-500-latinext.woff2') format('woff2'); unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family:"IBM Plex Sans"; font-style:normal; font-weight:600; font-display:swap; src:url('/app/static/fonts/IBMPlexSans-600-latin.woff2') format('woff2'); unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family:"IBM Plex Sans"; font-style:normal; font-weight:600; font-display:swap; src:url('/app/static/fonts/IBMPlexSans-600-latinext.woff2') format('woff2'); unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family:"IBM Plex Serif"; font-style:normal; font-weight:600; font-display:swap; src:url('/app/static/fonts/IBMPlexSerif-600-latin.woff2') format('woff2'); unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family:"IBM Plex Serif"; font-style:normal; font-weight:600; font-display:swap; src:url('/app/static/fonts/IBMPlexSerif-600-latinext.woff2') format('woff2'); unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family:"IBM Plex Mono"; font-style:normal; font-weight:400; font-display:swap; src:url('/app/static/fonts/IBMPlexMono-400-latin.woff2') format('woff2'); unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family:"IBM Plex Mono"; font-style:normal; font-weight:400; font-display:swap; src:url('/app/static/fonts/IBMPlexMono-400-latinext.woff2') format('woff2'); unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family:"IBM Plex Mono"; font-style:normal; font-weight:500; font-display:swap; src:url('/app/static/fonts/IBMPlexMono-500-latin.woff2') format('woff2'); unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family:"IBM Plex Mono"; font-style:normal; font-weight:500; font-display:swap; src:url('/app/static/fonts/IBMPlexMono-500-latinext.woff2') format('woff2'); unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
 :root {
   --papier:#F5F7F4; --encre:#1C2620; --craie:#E1E4DD; --eau:#2B6C8F;
   --sur:#3F7A5A; --vigilance:#C08A2E; --rupture:#A63D2F;
@@ -40,7 +51,21 @@ code, pre, time, .mono, [data-testid="stMetricValue"], td { font-family:"IBM Ple
 .section-kicker::before, .article-divider span::before, .expert-divider > span::before, .report-section-kicker::before { content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:currentColor; margin-right:.4em; opacity:.8; vertical-align:middle; }
 .soil-compact,.parcel-line { display:flex; gap:1.2rem; row-gap:.3rem; flex-wrap:wrap; align-items:baseline; padding:.55rem 0; }.soil-compact span,.parcel-line span { padding-right:1.2rem; border-right:1px solid var(--craie); }.soil-compact span:last-child,.parcel-line span:last-child { border-right:none; padding-right:0; }.soil-compact b,.parcel-line span { font-family:ui-monospace,monospace; }
 .soil-compact { border-top:1px solid var(--craie); margin:.5rem 0 0; color:var(--encre); opacity:.9; font-size:13.5px; }
+.om-soil-card { border:1px solid var(--craie); border-left:3px solid var(--eau); border-radius:var(--radius); background:var(--card); box-shadow:var(--shadow); padding:.85rem 1.05rem; margin:.6rem 0; }
+.om-soil-kicker { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--eau); margin-bottom:.6rem; }
+.om-soil-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+.om-soil-grid span { display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; opacity:.55; margin-bottom:3px; }
+.om-soil-grid strong { font-size:16px; font-weight:600; font-family:"IBM Plex Mono",monospace; }
+.om-soil-grid strong.lvl-haute { color:var(--sur); }
+.om-soil-grid strong.lvl-moyenne, .om-soil-grid strong.lvl-faible { color:var(--vigilance); }
 .parcel-line { border-top:1px solid var(--craie); border-bottom:2px solid var(--encre); margin:.5rem 0 .7rem; font-size:15px; }
+.datahub-banner { display:flex; gap:.7rem; align-items:flex-start; border:1px solid var(--craie); border-left:4px solid var(--sur); border-radius:var(--radius); background:var(--card); box-shadow:var(--shadow); padding:.7rem .9rem; margin:.3rem 0 .8rem; }
+.datahub-banner .datahub-dot { width:9px; height:9px; border-radius:50%; margin-top:.45rem; flex:none; background:var(--sur); }
+.datahub-banner.datahub-off { border-left-color:var(--vigilance); }.datahub-banner.datahub-off .datahub-dot { background:var(--vigilance); }
+.datahub-banner strong { font-size:13px; display:block; }
+.datahub-banner p { font-size:12px; margin:2px 0 0; opacity:.78; }
+.datahub-banner code { font-size:11px; }
+.datahub-src { display:flex; flex-wrap:wrap; gap:.35rem .7rem; margin-top:.45rem; font-size:11.5px; opacity:.9; }.datahub-src > div { display:flex; gap:.35rem; }.datahub-src b { font-variant-numeric:tabular-nums; }
 .waiting-story { min-height:110px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; border:1px solid var(--craie); border-radius:var(--radius); background:var(--card); box-shadow:var(--shadow); margin-top:.6rem; padding:.6rem; }.waiting-story strong { font:600 18px "IBM Plex Serif",Georgia,serif; }.waiting-story p { max-width:560px; font-size:13.5px; }
 .article-divider { border-top:2px solid var(--encre); margin:.7rem 0 .4rem; padding-top:.25rem; }.article-divider span { font-size:12px; letter-spacing:.12em; font-weight:600; }
 .sentinel-box { border:1px solid var(--craie); border-radius:var(--radius); background:var(--card); box-shadow:var(--shadow); margin-top:.7rem; padding:.7rem .9rem; }
@@ -145,11 +170,33 @@ button[kind="primary"] p, [data-testid="stBaseButton-primary"] p { color:var(--p
 
 [data-testid="stVerticalBlockBorderWrapper"] { border:1px solid var(--craie) !important; border-radius:var(--radius) !important; background:var(--card) !important; box-shadow:var(--shadow) !important; }
 
+/* Tunnel interne "Choisir sa culture" (Assolement.dc.html) */
+.om-tunnel-header { max-width:760px; margin:0 auto .7rem; }
+.om-tunnel-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.om-tunnel-title-row h1 { margin:0; }
+.om-step-count { font-family:"IBM Plex Mono",monospace; font-size:13px; opacity:.55; }
+.om-progress { display:flex; gap:4px; }
+.om-progress-seg { flex:1; height:3px; border-radius:2px; background:var(--craie); transition:background .3s ease; }
+.om-progress-seg.done { background:var(--encre); }
+.om-kicker { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; opacity:.55; margin-bottom:10px; }
+.st-key-om_screen { max-width:760px; margin:0 auto; animation:omFadeUp .4s ease; }
+.st-key-om_screen .om-row { margin:0 !important; }
+.st-key-om_screen [data-testid="stSelectbox"] [data-baseweb="select"] > div { font-size:16px !important; min-height:46px; }
+.st-key-om_screen [data-testid="stSelectbox"] [role="option"] { font-size:16px !important; }
+.st-key-om_screen > [data-testid="stElementContainer"] + [data-testid="stElementContainer"],
+.st-key-om_wide > [data-testid="stElementContainer"] + [data-testid="stElementContainer"] { margin-top:.95rem; }
+.st-key-om_screen [data-testid="stExpander"] { margin:.95rem 0 .3rem; }
+.st-key-om_screen [data-testid="stExpander"] [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"] + [data-testid="stElementContainer"] { margin-top:.8rem; }
+@keyframes omFadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+.assolement-spine-full .spine { border:none; box-shadow:none; padding:0; position:static; }
+.assolement-spine-full .spine h2 { display:none; }
+
 @media (prefers-reduced-motion:reduce) {
   .weather-hero .sun, .weather-hero .cloud, .weather-hero .drop, .weather-hero .flash, .weather-hero .sun .heat-line,
   .grass-band .blade, .frise-cursor { animation:none !important; }
   .grass-band .blade { transform:scaleY(1); }
   .frise-cursor { left:100%; }
+  .st-key-om_screen { animation:none !important; }
 }
 </style>
 """

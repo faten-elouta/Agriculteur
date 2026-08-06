@@ -147,7 +147,7 @@ def fetch_rpg_parcels(commune: dict[str, Any], year: int = 2023, limit: int = 20
             continue
         parcels.append({
             "id": f"RPG-{year}-{props['id_parcel']}",
-            "label": f"RPG {props['id_parcel']} — {float(props['surf_parc']):.2f} ha — culture {props.get('code_cultu') or 'non renseignée'}",
+            "label": f"RPG {props['id_parcel']} — {float(props['surf_parc']):.2f} ha",
             "commune": commune["nom"],
             "code_insee": commune["code"],
             "surface_ha": round(float(props["surf_parc"]), 2),

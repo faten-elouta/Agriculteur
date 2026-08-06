@@ -235,8 +235,8 @@ SOURCES: List[Source] = [
     ),
     Source(
         name="parcelles",
-        description="Parcelles de demonstration : geometrie, surface, culture declaree. "
-                    "Aucune donnee personnelle d'exploitant.",
+        description="Parcelles RPG de l'IGN (API Carto), publiques et anonymisees : geometrie, "
+                    "surface, culture declaree. Aucune donnee personnelle d'exploitant.",
         fields=[
             ("id_parcel", "string", "Identifiant de parcelle"),
             ("code_cultu", "string", "Culture declaree"),
@@ -244,12 +244,12 @@ SOURCES: List[Source] = [
             ("id_ucs", "string", "Rattachement au sol"),
             ("id_maille", "string", "Rattachement climatique"),
         ],
-        niveau_de_preuve="modelisation",
+        niveau_de_preuve="mesure",
         freshness_sla_days=365,
         last_updated="2026-03-01",
-        licence="Parcelles fictives",
-        redistribuable="oui (synthetique)",
-        tags=["source-synthetique"],
+        licence="IGN API Carto — RPG (licence ouverte)",
+        redistribuable="oui (anonymise, licence ouverte)",
+        tags=["source-mesuree"],
     ),
     Source(
         name="ref_agro_economique",

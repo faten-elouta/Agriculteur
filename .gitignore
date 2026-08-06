@@ -5,3 +5,5 @@ __pycache__/
 reports/*.json
 .claude/settings.local.json
 .superpowers/
+.vercel
+.claude/

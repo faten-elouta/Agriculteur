@@ -49,12 +49,12 @@
       "redistribuable": "oui (synthetique)"
     },
     "urn:li:dataset:(urn:li:dataPlatform:duckdb,parcelles,PROD)": {
-      "niveau_de_preuve": "modelisation",
+      "niveau_de_preuve": "mesure",
       "freshness_sla_days": "365",
       "last_updated": "2026-03-01",
       "spatial_coverage": "Nouvel Espace Cher",
-      "licence": "Parcelles fictives",
-      "redistribuable": "oui (synthetique)"
+      "licence": "IGN API Carto — RPG (licence ouverte)",
+      "redistribuable": "oui (anonymise, licence ouverte)"
     },
     "urn:li:dataset:(urn:li:dataPlatform:duckdb,ref_agro_economique,PROD)": {
       "niveau_de_preuve": "dire_d_expert",

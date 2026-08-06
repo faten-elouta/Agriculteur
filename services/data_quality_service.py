@@ -13,7 +13,7 @@ def build_quality_certificate(result: dict[str, Any]) -> dict[str, Any]:
     soil = result.get("soil_resolution") or {}
     soil_method = soil.get("method")
     checks = [
-        {"name": "Parcelle", "level": "elevee" if real_parcel else "faible", "evidence": result.get("parcelle_source", "synthétique")},
+        {"name": "Parcelle", "level": "elevee" if real_parcel else "faible", "evidence": result.get("parcelle_source", "RPG public anonymisé")},
         {"name": "Traçabilité", "level": "elevee" if lineage_ok else "insuffisante", "evidence": f"{len(sources)} sources reliées au calcul" if lineage_ok else "chaîne de sources rompue"},
         {"name": "Calculs", "level": "elevee", "evidence": "formules Python déterministes; aucun chiffre produit par un LLM"},
         {"name": "Sol", "level": {"mesure_utilisateur": "elevee", "source_secondaire": "moyenne", "interpolation_idw": "faible"}.get(soil_method, "faible"), "evidence": soil.get("detail", "sol non mesuré")},

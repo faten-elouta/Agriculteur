@@ -6,9 +6,24 @@ from services.recommendation_service import build_recommendation, recompute_marg
 from services.report_service import build_comparison_report, report_to_csv, save_report
 
 
+def real_parcel():
+    """Structure d'une parcelle RPG réelle (IGN API Carto), anonymisée."""
+    return {
+        "id": "RPG-2023-142",
+        "label": "RPG 142 — 18.40 ha — culture inconnue",
+        "commune": "Vierzon",
+        "code_insee": "18279",
+        "surface_ha": 18.4,
+        "sol": "limono-argileux",
+        "reserve_utile_mm": 140,
+        "culture_actuelle": "orge de printemps",
+        "source": "IGN API Carto — RPG anonymisé",
+    }
+
+
 def build_result():
-    parcel = json.load(open("data/demo_parcels.json", encoding="utf-8"))[0]
-    cultures = json.load(open("data/demo_cultures.json", encoding="utf-8"))
+    parcel = real_parcel()
+    cultures = json.load(open("data/cultures_reference.json", encoding="utf-8"))
     graph = load_graph("fixtures/graph.json")
     return build_recommendation(graph, parcel, cultures, date(2027, 4, 15), 3, date(2026, 7, 30))
 

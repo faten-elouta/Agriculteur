@@ -53,6 +53,28 @@ def intro_slide_html(index: int) -> str:
     """
 
 
+def tunnel_header_html(screen_index: int, screen_count: int) -> str:
+    """En-tête persistant du tunnel « Choisir sa culture » : titre, étape, progression."""
+    segments = "".join(
+        f'<div class="om-progress-seg{" done" if i <= screen_index else ""}"></div>'
+        for i in range(1, screen_count + 1)
+    )
+    return (
+        '<div class="om-tunnel-header">'
+        '<div class="om-tunnel-title-row">'
+        '<h1>Choisir sa culture</h1>'
+        f'<span class="om-step-count">Étape {screen_index} / {screen_count}</span>'
+        '</div>'
+        f'<div class="om-progress">{segments}</div>'
+        '</div>'
+    )
+
+
+def screen_kicker_html(label: str) -> str:
+    """Petit intitulé en tête de chaque écran du tunnel (« La question », « La réponse »…)."""
+    return f'<div class="om-kicker">{html.escape(label)}</div>'
+
+
 def _fmt(iso_date: str) -> str:
     return date.fromisoformat(iso_date).strftime("%d/%m/%Y")
 
@@ -139,7 +161,7 @@ def render_timeline(result: dict[str, Any]) -> str:
         margin_text = f'{"+" if margin >= 0 else "−"}{abs(margin):.0f} €/ha'
         annotation = ""
         if c["etat"] == "rupture":
-            ann_left = crit_left + crit_width / 2
+            ann_left = min(max(crit_left + crit_width / 2, 20), 78)
             annotation = (
                 f'<div style="position:absolute;left:{ann_left:.3f}%;top:44px;transform:translateX(-50%);'
                 f'white-space:nowrap;font-family:\'IBM Plex Sans\',sans-serif;font-size:12px;font-weight:600;'
@@ -292,3 +314,13 @@ def levers_panel(risky: dict[str, Any] | None) -> str:
       {"".join(rows)}
     </div>
     """
+
+
+def no_risk_panel_html() -> str:
+    """Contenu de l'écran « Comment éviter » quand aucune culture ne croise la tension en eau."""
+    return (
+        '<div style="margin-top:24px;border:1px solid var(--craie);border-radius:2px;'
+        'padding:20px;background:#F2F1EC;font-size:16px;opacity:.85;">'
+        "Aucune culture ne nécessite d'ajustement : aucune ne croise la tension en eau prévue sur cette fenêtre."
+        "</div>"
+    )

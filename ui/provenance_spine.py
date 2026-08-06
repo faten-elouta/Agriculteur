@@ -7,7 +7,7 @@ from typing import Any
 
 from services.provenance_service import short_name, urn_for
 
-ORDER = ["hubeau_hydrometrie", "hubeau_piezometrie", "hubeau_onde", "climat_journalier", "prevision_saisonniere", "features_bilan_hydrique", "scenarios_cultures", "recommandations_parcelle"]
+ORDER = ["hubeau_hydrometrie", "hubeau_piezometrie", "hubeau_onde", "climat_journalier", "prevision_saisonniere", "parcelles", "sol_rrp", "features_bilan_hydrique", "ref_agro_economique", "scenarios_cultures", "recommandations_parcelle"]
 
 
 def render_spine(graph: dict[str, Any], impacted: set[str] | None = None) -> str:
