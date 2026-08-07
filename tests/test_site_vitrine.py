@@ -112,3 +112,14 @@ def test_hero_text_is_html_escaped():
 def test_navbar_html_is_not_empty_for_each_tab():
     for tab in ("accueil", "application", "donnees", "contact"):
         assert len(navbar_html(tab)) > 200
+
+
+def test_auto_demo_via_url_starts_sequence():
+    """?view=application&demo=1 lance la démo sans clic (URL dédiée juges/tournage)."""
+    from streamlit.testing.v1 import AppTest
+
+    at = AppTest.from_file("app.py", default_timeout=60)
+    at.query_params.update({"view": "application", "demo": "1"})
+    at.run()
+    assert not at.exception
+    assert any("Arrêter" in b.label for b in at.button)

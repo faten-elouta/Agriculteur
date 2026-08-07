@@ -163,6 +163,13 @@ def _advance_demo() -> None:
         st.rerun()
 
 
+def _maybe_auto_demo(graph: dict, culture_specs: list[dict]) -> None:
+    """Lance la démo automatiquement si l'URL porte ?view=application&demo=1 (tournage, juges)."""
+    if st.query_params.get("demo") == "1" and st.session_state.get("view") == "application" and "demo" not in st.session_state:
+        _start_demo(graph, culture_specs)
+        st.query_params.clear()
+
+
 @st.cache_resource
 def get_datahub_client() -> DataHubClient:
     """Client GMS DataHub unique par processus (lecture DATAHUB_GMS_URL/DATAHUB_TOKEN)."""
@@ -657,7 +664,7 @@ def _resolve_view() -> str:
     param = st.query_params.get("view")
     if param in {"accueil", "application", "donnees", "contact"}:
         st.session_state.view = param
-        st.query_params.clear()
+        st.query_params.pop("view")
     return st.session_state.get("view", "accueil")
 
 
@@ -673,6 +680,7 @@ except (ValueError, RuntimeError) as exc:
     st.stop()
 
 view = _resolve_view()
+_maybe_auto_demo(graph, culture_specs)
 st.markdown(navbar_html(view), unsafe_allow_html=True)
 
 if view == "accueil":

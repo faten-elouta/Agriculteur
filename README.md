@@ -49,6 +49,9 @@ La navigation par onglets et les boutons d'action passent par des attributs
 (`?view=...`) — chaque vue est directement partageable. Les photos du collage
 sont des versions web optimisées (`assets/cultures/web/`) embarquées en base64.
 
+Pour juges et tournage vidéo, l'URL `?view=application&demo=1` lance
+automatiquement le mode démo (les six étapes se succèdent seules).
+
 ## Architecture
 
 Trois agents forment une boucle autour de DataHub :
