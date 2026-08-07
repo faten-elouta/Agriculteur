@@ -89,7 +89,7 @@ def test_approach_has_three_steps():
 
 def test_cta_points_to_application():
     out = cta_html()
-    assert "Lancer l'application" in out
+    assert "Analyser ma parcelle" in out
     assert 'href="?view=application"' in out
 
 

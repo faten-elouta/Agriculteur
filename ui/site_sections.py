@@ -143,7 +143,7 @@ def hero_html() -> str:
         "à partir de données ouvertes tracées : sol, eau, climat, marchés. Chaque chiffre est relié "
         "à sa source, contrôlé par un agent de supervision, et barré s'il devient périmé.</p>"
         '<div class="site-hero-cta">'
-        '<a class="site-btn site-btn-primary" href="?view=application">Lancer l\'application</a>'
+        '<a class="site-btn site-btn-primary" href="?view=application">Analyser ma parcelle</a>'
         '<a class="site-btn site-btn-ghost" href="?view=donnees">Voir le graphe & l\'IA</a>'
         "</div>"
         '<div class="site-hero-chips">'
@@ -339,7 +339,7 @@ def cta_html() -> str:
         "<h2>Prêt à comparer vos cultures sur votre parcelle ?</h2>"
         "<p>Entrez votre commune, chargez les parcelles réelles du RPG et recevez une comparaison sourcée, "
         "avec le certificat de données et les KPIs de confiance.</p>"
-        '<a class="site-btn site-btn-primary site-btn-lg" href="?view=application">Lancer l\'application →</a>'
+        '<a class="site-btn site-btn-primary site-btn-lg" href="?view=application">Analyser ma parcelle →</a>'
         "</div>"
         "</section>"
     )

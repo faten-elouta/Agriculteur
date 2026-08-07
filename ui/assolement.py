@@ -208,19 +208,6 @@ def render_timeline(result: dict[str, Any]) -> str:
     """
 
 
-def retain_sentence(result: dict[str, Any]) -> str:
-    at_risk = [c for c in result["cultures"] if c["etat"] != "sûr"]
-    if not at_risk:
-        return "Aucune des cultures comparées ne croise la tension en eau prévue sur cette fenêtre."
-    worst = max(at_risk, key=lambda c: c["recouvrement_avec_tension_j"])
-    if worst["etat"] == "rupture":
-        return (
-            f'Le {worst["culture"]} traverse son stade critique en pleine tension — '
-            f'{worst["recouvrement_avec_tension_j"]} jours de recouvrement. Vous voulez le garder ?'
-        )
-    return f'Le {worst["culture"]} chevauche partiellement la tension en eau — {worst["recouvrement_avec_tension_j"]} jours à surveiller.'
-
-
 def analysis_article(result: dict[str, Any]) -> str:
     cultures = result["cultures"]
     at_risk = [c for c in cultures if c["etat"] != "sûr"]
@@ -333,6 +320,95 @@ def levers_panel(risky: dict[str, Any] | None) -> str:
       {"".join(rows)}
     </div>
     """
+
+
+def verdict_sentence(result: dict[str, Any]) -> str:
+    """Phrase de synthèse à l'affirmative pour le niveau 1 (décision) de l'écran résultat."""
+    cultures = result["cultures"]
+    if not cultures:
+        return "Aucune culture ne peut être comparée avec ce niveau de confiance."
+    best = min(cultures, key=lambda c: c["rang"])
+    worst = max(cultures, key=lambda c: c["rang"])
+    risk_phrase = "aucun risque hydrique" if best["etat"] == "sûr" else f'{best["recouvrement_avec_tension_j"]} jours à surveiller'
+    diff = round(best["marge_brute_eur_ha"] - worst["marge_brute_eur_ha"])
+    if len(cultures) == 1 or diff <= 0:
+        return f'Sur cette parcelle, {best["culture"]} est l\'option la plus sûre parmi celles comparées — {risk_phrase}.'
+    return (
+        f'Sur cette parcelle, {best["culture"]} est l\'option la plus sûre : '
+        f'+{diff} €/ha vs {worst["culture"]}, {risk_phrase}.'
+    )
+
+
+def ranking_table_html(result: dict[str, Any]) -> str:
+    """Tableau de classement des cultures — niveau 1 (décision) de l'écran résultat."""
+    tone = {"sûr": "var(--sur)", "vigilance": "var(--vigilance)", "rupture": "var(--rupture)"}
+    header = (
+        '<div style="display:grid;grid-template-columns:28px 1.4fr 1fr 1fr 1fr 1.8fr;gap:10px;padding:0 4px 8px;'
+        'font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;opacity:.55;">'
+        '<div></div><div>Culture</div><div>État</div><div>Marge</div><div>Eau</div><div>Risque principal</div></div>'
+    )
+    rows = []
+    for c in sorted(result["cultures"], key=lambda c: c["rang"]):
+        crit = c["calendrier"]["stade_critique"]
+        risk = "Aucun" if c["etat"] == "sûr" else f'{crit["nom"]} — {c["recouvrement_avec_tension_j"]} j sous tension'
+        rows.append(
+            '<div style="display:grid;grid-template-columns:28px 1.4fr 1fr 1fr 1fr 1.8fr;align-items:center;'
+            'gap:10px;padding:12px 4px;border-top:1px solid var(--craie);font-size:14px;">'
+            f'<div style="font-family:\'IBM Plex Mono\',monospace;opacity:.55;">#{c["rang"]}</div>'
+            f'<div style="font-family:\'IBM Plex Serif\',serif;font-weight:600;font-size:15px;">{html.escape(c["culture"].capitalize())}</div>'
+            f'<div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{tone[c["etat"]]};margin-right:6px;"></span>{html.escape(c["etat"].capitalize())}</div>'
+            f'<div style="font-family:\'IBM Plex Mono\',monospace;">{c["marge_brute_eur_ha"]:+.0f} €/ha</div>'
+            f'<div style="font-family:\'IBM Plex Mono\',monospace;">{c["besoin_irrigation_mm"]:.0f} mm</div>'
+            f'<div style="opacity:.8;">{html.escape(risk)}</div>'
+            "</div>"
+        )
+    return f'<div style="margin-top:8px;">{header}{"".join(rows)}</div>'
+
+
+def crop_reason_line(c: dict[str, Any]) -> str:
+    """Une ligne de raison par culture (y compris sûre) — niveau 2 (pourquoi)."""
+    crit = c["calendrier"]["stade_critique"]
+    if c["etat"] == "sûr":
+        return f'{c["culture"].capitalize()} : {crit["nom"]} tombe hors tension — aucun risque.'
+    qualifier = "en pleine tension" if c["etat"] == "rupture" else "partiellement dans la tension"
+    return (
+        f'{c["culture"].capitalize()} : {crit["nom"]} du {_fmt(crit["debut"])} au {_fmt(crit["fin"])} '
+        f'tombe {qualifier} — {c["recouvrement_avec_tension_j"]} j de recouvrement.'
+    )
+
+
+def comparator_html(a: dict[str, Any], b: dict[str, Any]) -> str:
+    """« Et si je remplace X par Y ? » — compare deux cultures déjà calculées, aucune nouvelle donnée."""
+    def risk_txt(c: dict[str, Any]) -> str:
+        return "Aucun risque hydrique" if c["etat"] == "sûr" else f'{c["recouvrement_avec_tension_j"]} j sous tension'
+
+    def col(c: dict[str, Any]) -> str:
+        return (
+            '<div style="flex:1;min-width:180px;">'
+            f'<div style="font-family:\'IBM Plex Serif\',serif;font-weight:600;font-size:16px;margin-bottom:8px;">{html.escape(c["culture"].capitalize())}</div>'
+            f'<div style="font-size:13px;padding:6px 0;border-top:1px solid var(--craie);display:flex;justify-content:space-between;"><span style="opacity:.6;">Eau</span><b>{c["besoin_irrigation_mm"]:.0f} mm</b></div>'
+            f'<div style="font-size:13px;padding:6px 0;border-top:1px solid var(--craie);display:flex;justify-content:space-between;"><span style="opacity:.6;">Risque</span><b>{html.escape(risk_txt(c))}</b></div>'
+            f'<div style="font-size:13px;padding:6px 0;border-top:1px solid var(--craie);display:flex;justify-content:space-between;"><span style="opacity:.6;">Marge</span><b>{c["marge_brute_eur_ha"]:+.0f} €/ha</b></div>'
+            "</div>"
+        )
+
+    diff = round(b["marge_brute_eur_ha"] - a["marge_brute_eur_ha"])
+    if a["culture"] == b["culture"]:
+        verdict = "Choisissez deux cultures différentes pour comparer."
+    elif diff > 0:
+        water_gain = " et réduit le besoin en eau" if b["besoin_irrigation_mm"] < a["besoin_irrigation_mm"] else ""
+        verdict = f'Remplacer {a["culture"]} par {b["culture"]} apporte +{diff} €/ha{water_gain}.'
+    elif diff < 0:
+        verdict = f'Remplacer {a["culture"]} par {b["culture"]} coûte {abs(diff)} €/ha de marge sur ce scénario.'
+    else:
+        verdict = f'{a["culture"].capitalize()} et {b["culture"]} ont une marge équivalente sur cette parcelle.'
+
+    return (
+        '<div style="display:flex;gap:24px;align-items:flex-start;margin-top:12px;flex-wrap:wrap;">'
+        f'{col(a)}<div style="font-size:20px;opacity:.4;padding-top:22px;">→</div>{col(b)}'
+        "</div>"
+        f'<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--craie);font-size:14px;font-weight:500;">{html.escape(verdict)}</div>'
+    )
 
 
 def no_risk_panel_html() -> str:
