@@ -116,9 +116,11 @@ def test_navbar_html_is_not_empty_for_each_tab():
 
 def test_auto_demo_via_url_starts_sequence():
     """?view=application&demo=1 lance la démo sans clic (URL dédiée juges/tournage)."""
+    from pathlib import Path
+
     from streamlit.testing.v1 import AppTest
 
-    at = AppTest.from_file("app.py", default_timeout=60)
+    at = AppTest.from_file(Path(__file__).parent.parent / "app.py", default_timeout=60)
     at.query_params.update({"view": "application", "demo": "1"})
     at.run()
     assert not at.exception
