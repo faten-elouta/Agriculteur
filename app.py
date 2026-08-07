@@ -369,27 +369,32 @@ def render_question_screen(graph: dict, culture_specs: list[dict]) -> None:
         '<div class="om-soil-grid">'
         f'<div><span>Sol</span><strong>{resolved_soil.soil_type}</strong></div>'
         f'<div><span>Réserve utile</span><strong>{anim.count_up_number(int(resolved_soil.reserve_utile_mm), suffix=" mm")}</strong></div>'
-        f'<div><span>Confiance</span><strong class="lvl-{resolved_soil.confidence}">{resolved_soil.confidence}</strong></div>'
         '</div>'
         '</div>'
     )
     st.markdown(anim.fade_up(anim.card_hover(soil_card)), unsafe_allow_html=True)
-    with st.expander("J’ai une analyse de sol plus précise"):
-        known_soil = st.selectbox("Type de sol mesuré", [resolved_soil.soil_type, "limono-argileux", "limoneux", "argileux", "sableux", "autre / inconnu"])
-        known_ru = st.number_input("Réserve utile mesurée (mm)", 30, 250, resolved_soil.reserve_utile_mm, 5)
-        if st.checkbox("Utiliser mon analyse"):
-            parcel = dict(parcel, sol=known_soil, reserve_utile_mm=int(known_ru), soil_resolution={"method": "mesure_utilisateur", "source": "analyse utilisateur", "confidence": "haute", "detail": "Analyse déclarée comme mesurée."})
+    with st.expander("Détails et confiance de l'analyse de sol"):
+        st.markdown(
+            f'<div style="font-size:13px;opacity:.8;">Confiance : <b class="lvl-{resolved_soil.confidence}">{resolved_soil.confidence}</b> · {resolved_soil.detail}</div>',
+            unsafe_allow_html=True,
+        )
+        with st.container():
+            known_soil = st.selectbox("Type de sol mesuré", [resolved_soil.soil_type, "limono-argileux", "limoneux", "argileux", "sableux", "autre / inconnu"], key="known_soil_sel")
+            known_ru = st.number_input("Réserve utile mesurée (mm)", 30, 250, resolved_soil.reserve_utile_mm, 5, key="known_ru_num")
+            if st.checkbox("Utiliser mon analyse", key="use_my_soil"):
+                parcel = dict(parcel, sol=known_soil, reserve_utile_mm=int(known_ru), soil_resolution={"method": "mesure_utilisateur", "source": "analyse utilisateur", "confidence": "haute", "detail": "Analyse déclarée comme mesurée."})
 
     parcel_line_facts = f'<span>{parcel["commune"]}</span><span>{parcel["surface_ha"]} ha</span><span>{parcel["sol"]}</span><span>RU {parcel["reserve_utile_mm"]} mm</span>'
     st.markdown(anim.fade_up(f'<div class="parcel-line">{parcel_line_facts}</div>', delay=1), unsafe_allow_html=True)
     st.session_state.parcelle_id = parcel.get("id", selected_label)
-    st.markdown(
-        anim.fade_up(
-            f'<div class="parcel-map">{render_parcel_map(territory.parcels, territory.hydro_stations, selected_id=st.session_state.parcelle_id)}</div>',
-            delay=2,
-        ),
-        unsafe_allow_html=True,
-    )
+    with st.expander("Voir la parcelle et les stations d’eau sur la carte"):
+        st.markdown(
+            anim.fade_up(
+                f'<div class="parcel-map">{render_parcel_map(territory.parcels, territory.hydro_stations, selected_id=st.session_state.parcelle_id)}</div>',
+                delay=2,
+            ),
+            unsafe_allow_html=True,
+        )
     calculate = st.button("Comparer les cultures pour cette parcelle", type="primary", width="stretch")
     if calculate:
         result = build_recommendation(graph, parcel, culture_specs, sowing, horizon, date(2026, 7, 30))
@@ -426,7 +431,7 @@ def archive_report(result: dict, simulated_by_culture: dict) -> None:
 
 
 def render_answer_screen(result: dict) -> None:
-    """Écran 2 — La réponse : confiance, calendrier, analyse et chiffrage."""
+    """Écran 2 — La réponse : verdict court d'abord, détails au clic (onglets)."""
     st.markdown(anim.mask_reveal(screen_kicker_html("LA RÉPONSE")), unsafe_allow_html=True)
     confidence_notice(result)
     quality = build_quality_certificate(result)
@@ -440,30 +445,20 @@ def render_answer_screen(result: dict) -> None:
         ),
         unsafe_allow_html=True,
     )
-    st.markdown(anim.fade_up(kpis_html(graph, result, get_datahub_client()), delay=1), unsafe_allow_html=True)
     if not result["cultures"]:
         st.info("Aucune culture ne peut être chiffrée avec ce niveau de confiance.")
         return
 
-    st.markdown(anim.fade_up(render_timeline(result)), unsafe_allow_html=True)
-    st.markdown('<div class="report-section">', unsafe_allow_html=True)
-    st.markdown(anim.mask_reveal('<div class="report-section-kicker">RAPPORT</div>', tag="div"), unsafe_allow_html=True)
     st.markdown(
         anim.fade_up(
-            '<div style="margin-bottom:.4rem;">'
-            '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;opacity:.55;margin-bottom:4px;">Ce qu\'il faut retenir</div>'
-            f'<div style="font-size:15px;font-weight:600;">{retain_sentence(result)}</div>'
-            '</div>'
+            '<div class="answer-verdict">'
+            '<div class="answer-verdict-kicker">Ce qu\'il faut retenir</div>'
+            f'<div class="answer-verdict-text">{retain_sentence(result)}</div>'
+            "</div>"
         ),
         unsafe_allow_html=True,
     )
-    st.markdown(anim.fade_up(analysis_article(result), delay=1), unsafe_allow_html=True)
 
-    st.markdown(
-        '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;opacity:.55;margin:.7rem 0 .2rem;">Simulez avec vos propres chiffres</div>',
-        unsafe_allow_html=True,
-    )
-    st.caption("Remplacez ces valeurs par les vôtres pour les trois cultures d'un coup. Le calendrier et le classement plus haut restent ceux du scénario ; seule la marge simulée change.")
     sim_input_rows = [
         {
             "Culture": crop["culture"].capitalize(),
@@ -480,43 +475,69 @@ def render_answer_screen(result: dict) -> None:
         }
         for crop in result["cultures"]
     ]
-    edited_df = st.data_editor(pd.DataFrame(sim_input_rows), hide_index=True, width="stretch", key="simulation_editor")
-    simulated_by_culture = {}
-    for crop, row in zip(result["cultures"], edited_df.to_dict("records")):
-        d = crop["decomposition_marge"]
-        simulated_by_culture[crop["culture"]] = recompute_margin(
-            crop["besoin_irrigation_mm"],
-            d["perte_si_restriction_eur_ha"],
-            rendement_qx_ha=row["Rendement (q/ha)"],
-            prix_eur_qx=row["Prix (€/q)"],
-            aides_primes_eur_ha=row["Aides (€/ha)"],
-            semences_eur_ha=row["Semences (€/ha)"],
-            fertilisation_eur_ha=row["Fertilisation (€/ha)"],
-            protection_eur_ha=row["Protection (€/ha)"],
-            travaux_carburant_eur_ha=row["Travaux/carburant (€/ha)"],
-            sechage_eur_ha=row["Séchage (€/ha)"],
-            prestation_eur_ha=row["Prestation (€/ha)"],
-            cout_eau_eur_m3=row["Eau (€/m³)"],
-        )
-    st.markdown(simulation_recap_html(result["cultures"], simulated_by_culture), unsafe_allow_html=True)
 
-    st.markdown('<div class="report-subhead">Rapport de comparaison</div>', unsafe_allow_html=True)
-    report_action_col, report_download_col = st.columns(2)
-    with report_action_col:
-        if st.session_state.get("last_report"):
-            st.success("Rapport archivé — le CSV est prêt à droite.")
-        else:
-            st.button("Générer et archiver le rapport", width="stretch", on_click=archive_report, args=(result, simulated_by_culture))
-    with report_download_col:
-        if st.session_state.get("last_report"):
-            st.download_button(
-                "Télécharger le rapport (CSV)",
-                data=report_to_csv(st.session_state.last_report),
-                file_name=f"comparaison_{result['parcelle_id']}.csv",
-                mime="text/csv",
-                width="stretch",
+    def _simulate(rows: pd.DataFrame) -> dict:
+        computed = {}
+        for crop, row in zip(result["cultures"], rows.to_dict("records")):
+            d = crop["decomposition_marge"]
+            computed[crop["culture"]] = recompute_margin(
+                crop["besoin_irrigation_mm"],
+                d["perte_si_restriction_eur_ha"],
+                rendement_qx_ha=row["Rendement (q/ha)"],
+                prix_eur_qx=row["Prix (€/q)"],
+                aides_primes_eur_ha=row["Aides (€/ha)"],
+                semences_eur_ha=row["Semences (€/ha)"],
+                fertilisation_eur_ha=row["Fertilisation (€/ha)"],
+                protection_eur_ha=row["Protection (€/ha)"],
+                travaux_carburant_eur_ha=row["Travaux/carburant (€/ha)"],
+                sechage_eur_ha=row["Séchage (€/ha)"],
+                prestation_eur_ha=row["Prestation (€/ha)"],
+                cout_eau_eur_m3=row["Eau (€/m³)"],
             )
-    st.markdown('</div>', unsafe_allow_html=True)
+        return computed
+
+    simulated_by_culture = _simulate(pd.DataFrame(sim_input_rows))
+
+    verdict_tab, calendar_tab, simulate_tab, report_tab = st.tabs(
+        ["Verdict", "Calendrier & eau", "Simuler mes prix", "Rapport"]
+    )
+
+    with verdict_tab:
+        st.markdown(anim.fade_up(analysis_article(result), delay=1), unsafe_allow_html=True)
+        st.markdown(anim.fade_up(kpis_html(graph, result, get_datahub_client()), delay=1), unsafe_allow_html=True)
+
+    with calendar_tab:
+        st.markdown(anim.fade_up(render_timeline(result)), unsafe_allow_html=True)
+        st.markdown(anim.fade_up(render_water_chart(result["cultures"], result["fenetre_de_tension"])), unsafe_allow_html=True)
+        st.caption("Besoins d'irrigation répartis sur le cycle de chaque culture, avec la fenêtre de tension hydrique.")
+
+    with simulate_tab:
+        st.markdown(
+            '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;opacity:.55;margin:.7rem 0 .2rem;">Simulez avec vos propres chiffres</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption("Remplacez ces valeurs par les vôtres pour les trois cultures d'un coup. Le calendrier et le classement restent ceux du scénario ; seule la marge simulée change.")
+        edited_df = st.data_editor(pd.DataFrame(sim_input_rows), hide_index=True, width="stretch", key="simulation_editor")
+        simulated_by_culture = _simulate(edited_df)
+        st.markdown(simulation_recap_html(result["cultures"], simulated_by_culture), unsafe_allow_html=True)
+
+    with report_tab:
+        st.markdown('<div class="report-subhead">Rapport de comparaison</div>', unsafe_allow_html=True)
+        report_action_col, report_download_col = st.columns(2)
+        with report_action_col:
+            if st.session_state.get("last_report"):
+                st.success("Rapport archivé — le CSV est prêt à droite.")
+            else:
+                st.button("Générer et archiver le rapport", width="stretch", on_click=archive_report, args=(result, simulated_by_culture))
+        with report_download_col:
+            if st.session_state.get("last_report"):
+                st.download_button(
+                    "Télécharger le rapport (CSV)",
+                    data=report_to_csv(st.session_state.last_report),
+                    file_name=f"comparaison_{result['parcelle_id']}.csv",
+                    mime="text/csv",
+                    width="stretch",
+                )
 
 
 def render_avoid_screen(result: dict) -> None:
@@ -526,11 +547,17 @@ def render_avoid_screen(result: dict) -> None:
         st.info("Aucune culture à analyser.")
         return
     at_risk_crops = [c for c in result["cultures"] if c["etat"] != "sûr"]
-    risky = max(at_risk_crops, key=lambda c: c["recouvrement_avec_tension_j"]) if at_risk_crops else None
-    if risky:
-        st.markdown(anim.fade_up(anim.card_hover(levers_panel(risky))), unsafe_allow_html=True)
-    else:
-        st.markdown(anim.fade_up(no_risk_panel_html()), unsafe_allow_html=True)
+    if not at_risk_crops:
+        st.markdown(anim.fade_up(anim.card_hover(no_risk_panel_html())), unsafe_allow_html=True)
+        return
+    at_risk_crops.sort(key=lambda c: c["recouvrement_avec_tension_j"], reverse=True)
+    if len(at_risk_crops) == 1:
+        st.markdown(anim.fade_up(anim.card_hover(levers_panel(at_risk_crops[0]))), unsafe_allow_html=True)
+        return
+    tabs = st.tabs([c["culture"].capitalize() for c in at_risk_crops])
+    for tab, crop in zip(tabs, at_risk_crops):
+        with tab:
+            st.markdown(anim.fade_up(anim.card_hover(levers_panel(crop))), unsafe_allow_html=True)
 
 
 def datahub_banner_html(graph: dict) -> str:
@@ -591,47 +618,71 @@ def render_provenance_screen(result: dict, graph: dict) -> None:
         unsafe_allow_html=True,
     )
     st.markdown(datahub_banner_html(graph), unsafe_allow_html=True)
-    st.markdown(anim.fade_up(kpis_html(graph, result, get_datahub_client())), unsafe_allow_html=True)
-    render_supervision_console(get_datahub_client(), graph)
-    st.markdown('<div class="assolement-spine-full">', unsafe_allow_html=True)
-    st.markdown(render_spine(graph, set(st.session_state.get("impacted", []))), unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    provenance_tab, quality_tab, expert_tab = st.tabs(["Provenance des chiffres", "Chiffres & confiance", "Vue experte"])
+    with provenance_tab:
+        st.markdown(anim.fade_up(kpis_html(graph, result, get_datahub_client())), unsafe_allow_html=True)
+        render_supervision_console(get_datahub_client(), graph)
+        st.markdown('<div class="assolement-spine-full">', unsafe_allow_html=True)
+        st.markdown(render_spine(graph, set(st.session_state.get("impacted", []))), unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    impacted = set(st.session_state.get("impacted", []))
-    st.markdown(
-        anim.fade_up(
-            '<div class="report-subhead">Le graphe de lineage — chaque chiffre a un chemin</div>'
-        ),
-        unsafe_allow_html=True,
-    )
-    st.markdown(lineage_html(graph, impacted_urns=impacted), unsafe_allow_html=True)
+        impacted = set(st.session_state.get("impacted", []))
+        st.markdown(
+            anim.fade_up(
+                '<div class="report-subhead">Le graphe de lineage — chaque chiffre a un chemin</div>'
+            ),
+            unsafe_allow_html=True,
+        )
+        st.markdown(lineage_html(graph, impacted_urns=impacted), unsafe_allow_html=True)
 
-    st.markdown('<div class="report-subhead">Détails techniques et vue experte</div>', unsafe_allow_html=True)
-    with st.expander("Voir tous les chiffres et la confiance", expanded=False):
-        confidence_dashboard(result)
-        st.markdown('<div class="quality-list animate-stagger">' + "".join(f'<div class="quality-{item["level"]}"><span>{item["name"]}</span><b>{item["level"]}</b><small>{item["evidence"]}</small></div>' for item in quality["checks"]) + '</div>', unsafe_allow_html=True)
-        st.dataframe([{"Culture": crop["culture"], "Jours à risque": crop["recouvrement_avec_tension_j"], "Eau (mm)": crop["besoin_irrigation_mm"], "Budget irrigation (€/ha)": crop["cout_eau_eur_ha"], "Résultat estimé (€/ha)": crop["marge_brute_eur_ha"]} for crop in result["cultures"]], hide_index=True, width="stretch")
-    with st.expander("Sources de secours essayées"):
-        for attempt in result.get("resolution_log", []):
-            symbol = "✓" if "utilisée" in attempt["status"] else "→"
-            st.write(f'{symbol} **{attempt["field"].capitalize()}** — {attempt["source"]} : {attempt["status"]}')
-    with st.expander("Vue experte : audit des données et des modèles"):
+    with quality_tab:
+        with st.expander("Voir tous les chiffres et la confiance", expanded=True):
+            confidence_dashboard(result)
+            st.markdown('<div class="quality-list animate-stagger">' + "".join(f'<div class="quality-{item["level"]}"><span>{item["name"]}</span><b>{item["level"]}</b><small>{item["evidence"]}</small></div>' for item in quality["checks"]) + '</div>', unsafe_allow_html=True)
+            st.dataframe([{"Culture": crop["culture"], "Jours à risque": crop["recouvrement_avec_tension_j"], "Eau (mm)": crop["besoin_irrigation_mm"], "Budget irrigation (€/ha)": crop["cout_eau_eur_ha"], "Résultat estimé (€/ha)": crop["marge_brute_eur_ha"]} for crop in result["cultures"]], hide_index=True, width="stretch")
+        with st.expander("Sources de secours essayées"):
+            for attempt in result.get("resolution_log", []):
+                symbol = "✓" if "utilisée" in attempt["status"] else "→"
+                st.write(f'{symbol} **{attempt["field"].capitalize()}** — {attempt["source"]} : {attempt["status"]}')
+        with st.expander("Vue experte : audit des données et des modèles"):
+            expert = build_expert_report(result)
+            st.markdown(f'<div class="expert-heading"><div><span>SCORE TECHNIQUE MOYEN</span><strong>{anim.count_up_number(expert["overall_score"])}<span style="opacity:.6">/100</span></strong></div><p>Ce score résume la qualité technique des entrées. Il ne prédit pas le rendement futur.</p></div>', unsafe_allow_html=True)
+            collected_tab, failed_tab, models_tab, scores_tab = st.tabs(["Données collectées", "Sources en échec", "Modèles utilisés", "Scores"])
+            with collected_tab:
+                st.dataframe(expert["collected"], hide_index=True, width="stretch")
+            with failed_tab:
+                if expert["failures"]:
+                    st.dataframe(expert["failures"], hide_index=True, width="stretch")
+                else:
+                    st.success("Aucun échec de source enregistré sur cette exécution.")
+            with models_tab:
+                st.dataframe(expert["models"], hide_index=True, width="stretch")
+                with st.expander("Paramètres du scénario"):
+                    st.json({"parcelle": result["parcelle_id"], "semis": result["date_semis"], "horizon_mois": result["horizon_mois"], "sol": result["sol"], "fenetre_de_tension": result["fenetre_de_tension"]})
+            with scores_tab:
+                st.caption("Barème : élevée = 100, moyenne = 65, faible = 30, insuffisante = 0.")
+                st.dataframe(expert["scores"], hide_index=True, width="stretch")
+
+    with expert_tab:
         expert = build_expert_report(result)
         st.markdown(f'<div class="expert-heading"><div><span>SCORE TECHNIQUE MOYEN</span><strong>{anim.count_up_number(expert["overall_score"])}<span style="opacity:.6">/100</span></strong></div><p>Ce score résume la qualité technique des entrées. Il ne prédit pas le rendement futur.</p></div>', unsafe_allow_html=True)
         collected_tab, failed_tab, models_tab, scores_tab = st.tabs(["Données collectées", "Sources en échec", "Modèles utilisés", "Scores"])
         with collected_tab:
+            st.write("Valeurs et métadonnées effectivement utilisées dans ce calcul.")
             st.dataframe(expert["collected"], hide_index=True, width="stretch")
         with failed_tab:
+            st.write("Sources essayées mais non retenues avant le passage à la source suivante.")
             if expert["failures"]:
                 st.dataframe(expert["failures"], hide_index=True, width="stretch")
             else:
                 st.success("Aucun échec de source enregistré sur cette exécution.")
         with models_tab:
+            st.write("Modèles et formules utilisés pour produire les chiffres.")
             st.dataframe(expert["models"], hide_index=True, width="stretch")
             with st.expander("Paramètres du scénario"):
                 st.json({"parcelle": result["parcelle_id"], "semis": result["date_semis"], "horizon_mois": result["horizon_mois"], "sol": result["sol"], "fenetre_de_tension": result["fenetre_de_tension"]})
         with scores_tab:
-            st.caption("Barème : élevée = 100, moyenne = 65, faible = 30, insuffisante = 0.")
+            st.write("Barème : élevée = 100, moyenne = 65, faible = 30, insuffisante = 0.")
             st.dataframe(expert["scores"], hide_index=True, width="stretch")
 
 

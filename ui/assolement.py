@@ -291,11 +291,30 @@ def simulation_recap_html(cultures: list[dict[str, Any]], simulated_by_culture: 
 
 
 def levers_panel(risky: dict[str, Any] | None) -> str:
-    if not risky or not risky.get("leviers"):
-        return ""
+    """Panneau des leviers d'une culture à risque. Jamais vide : si aucun levier
+    n'est calculable, un message l'explique au lieu d'une page blanche."""
+    if risky is None:
+        return (
+            '<div style="margin-top:24px;border:1px solid var(--craie);border-radius:2px;'
+            'padding:20px;background:#F2F1EC;font-size:15px;opacity:.85;">'
+            "Aucune culture à risque : rien à corriger."
+            "</div>"
+        )
+    leviers = risky.get("leviers") or []
+    if not leviers:
+        return (
+            f'<div style="margin-top:24px;border:1px solid var(--craie);border-radius:2px;'
+            f'padding:20px;background:#F2F1EC;">'
+            f'<div style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;color:var(--encre);opacity:.6;">'
+            f'Comment éviter — {html.escape(risky["culture"].capitalize())}</div>'
+            f'<div style="font-size:15px;opacity:.85;margin-top:8px;">'
+            f'Aucun levier calculable pour cette culture sur cette parcelle. Le plus sûr reste de '
+            f'comparer avec une culture dont le stade critique tombe hors tension.</div>'
+            "</div>"
+        )
     overlap = risky["recouvrement_avec_tension_j"]
     rows = []
-    for lv in risky["leviers"]:
+    for lv in leviers:
         rows.append(
             '<div style="display:block;width:100%;text-align:left;border-top:1px solid var(--craie);padding:14px 20px;">'
             '<div style="font-size:15px;font-weight:500;display:flex;justify-content:space-between;">'

@@ -274,3 +274,16 @@ def test_water_chart_animates_bars_in_sequence():
     crops = [_crop("maïs", "2027-05-01", "2027-09-15", 210)]
     html = render_water_chart(crops, [])
     assert "--wc-i:0" in html
+
+
+def test_levers_panel_never_empty():
+    from ui.assolement import levers_panel
+
+    assert "Aucune culture à risque" in levers_panel(None)
+    assert "Aucun levier calculable" in levers_panel({"culture": "maïs", "recouvrement_avec_tension_j": 20, "leviers": []})
+    panel = levers_panel(
+        {"culture": "maïs", "recouvrement_avec_tension_j": 20,
+         "leviers": [{"action": "Avancer le semis", "recouvrement_apres_j": 0, "reserve": "Portance", "gain_marge_eur_ha": 140}]}
+    )
+    assert "Avancer le semis" in panel
+    assert "Comment éviter — Maïs" in panel
