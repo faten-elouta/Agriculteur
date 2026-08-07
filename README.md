@@ -30,6 +30,25 @@ une commune puis cliquez sur « Chercher les parcelles » : le RPG, le sol
 - **Exemple autonome** : `python examples/gms_demo.py` interroge le GMS public
   (lecture, lineage, écriture de runs et d'incidents) avec la bibliothèque standard.
 
+## Site vitrine
+
+L'application s'ouvre sur une landing page (format consilium-bsf.fr/vision) avec
+des onglets de navigation en haut :
+
+- **Vision** (accueil) : hero avec collage de photos de cultures, chiffres clés,
+  présentation « un conseil fondé sur les données », valeurs, expertises
+  illustrées et approche en trois étapes (`ui/site_sections.py`).
+- **Application** : le tunnel décisionnel complet (parcelle → comparaison →
+  scénario météo → provenance des chiffres).
+- **Graphe & IA** : vue DataHub — graphe connecté, KPIs Confiance/Produit/IA,
+  console de supervision de l'agent et lineage interactif.
+- **Contact** : cartes équipe, code et live.
+
+La navigation par onglets et les boutons d'action passent par des attributs
+`data-nav` câblés en JavaScript (`ui/animations.py`) qui changent l'URL
+(`?view=...`) — chaque vue est directement partageable. Les photos du collage
+sont des versions web optimisées (`assets/cultures/web/`) embarquées en base64.
+
 ## Architecture
 
 Trois agents forment une boucle autour de DataHub :

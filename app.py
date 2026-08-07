@@ -45,6 +45,17 @@ from ui.scenario_timeline import render_crop_scenario
 from ui.step_nav import render_step_indicator
 from ui.supervision_console import render_supervision_console
 from ui.water_chart import render_water_chart
+from ui.site_sections import (
+    approach_html,
+    about_html,
+    cta_html,
+    expertise_html,
+    footer_html,
+    hero_html,
+    navbar_html,
+    stats_band_html,
+    values_html,
+)
 from ui.styles import CSS
 from ui.weather_scene import compute_header_state, render_header_scene, render_grass_band
 from ui import animations as anim
@@ -104,18 +115,26 @@ def _start_demo(graph: dict, culture_specs: list[dict]) -> None:
     """Prépare la démo : territoire par défaut, résultat calculé, séquence lancée."""
     if "real_territory" not in st.session_state:
         st.session_state.real_territory = _demo_territory()
+    _ensure_result(graph, culture_specs)
+    st.session_state.impacted = []
+    st.session_state.demo = {"idx": 0}
+    st.session_state.step = 1
+    st.session_state.assolement_screen = 1
+
+
+def _ensure_result(graph: dict, culture_specs: list[dict]) -> dict:
+    """Résultat de démonstration hors réseau si aucun calcul n'a encore été fait."""
     if "result" not in st.session_state:
         result = build_recommendation(
             graph, _demo_parcel(), culture_specs, date(2027, 4, 15), 3, date(2026, 7, 30)
         )
         result["mode_donnees"] = "demo"
         result["parcelle_source"] = "parcelle de démonstration (hors réseau)"
-        result["resolution_log"] = st.session_state.real_territory.resolution_log
+        result["resolution_log"] = [
+            {"field": "commune", "source": "territoire de démonstration", "status": "utilisée"}
+        ]
         st.session_state.result = result
-    st.session_state.impacted = []
-    st.session_state.demo = {"idx": 0}
-    st.session_state.step = 1
-    st.session_state.assolement_screen = 1
+    return st.session_state.result
 
 
 def _apply_demo_position() -> None:
@@ -607,6 +626,41 @@ def render_provenance_screen(result: dict, graph: dict) -> None:
             st.dataframe(expert["scores"], hide_index=True, width="stretch")
 
 
+def render_datahub_view(graph: dict, culture_specs: list[dict]) -> None:
+    """Vue « Données & IA » du site vitrine : graphe connecté, KPIs, supervision, lineage."""
+    result = _ensure_result(graph, culture_specs)
+    client = get_datahub_client()
+    st.markdown(
+        anim.mask_reveal(
+            '<div class="site-view-head"><h1>Un graphe de contexte vif, sous contrôle</h1>'
+            '<p>Chaque chiffre de l’application est lu dans le graphe DataHub, contrôlé par la Sentinelle et tracé du capteur jusqu’à la recommandation.</p></div>'
+        ),
+        unsafe_allow_html=True,
+    )
+    st.markdown(datahub_banner_html(graph), unsafe_allow_html=True)
+    st.markdown(anim.fade_up(kpis_html(graph, result, client)), unsafe_allow_html=True)
+    render_supervision_console(client, graph)
+    st.markdown('<div class="assolement-spine-full">', unsafe_allow_html=True)
+    st.markdown(render_spine(graph, set(st.session_state.get("impacted", []))), unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown(
+        anim.fade_up('<div class="report-subhead">Le graphe de lineage — chaque chiffre a un chemin</div>'),
+        unsafe_allow_html=True,
+    )
+    st.markdown(lineage_html(graph, impacted_urns=set(st.session_state.get("impacted", []))), unsafe_allow_html=True)
+    st.markdown(cta_html(), unsafe_allow_html=True)
+    st.markdown(footer_html(), unsafe_allow_html=True)
+
+
+def _resolve_view() -> str:
+    """Vue courante du site : accueil par défaut, bascule via l'URL ?view=..."""
+    param = st.query_params.get("view")
+    if param in {"accueil", "application", "donnees", "contact"}:
+        st.session_state.view = param
+        st.query_params.clear()
+    return st.session_state.get("view", "accueil")
+
+
 st.set_page_config(page_title="Terroir Context Agents", layout="wide", initial_sidebar_state="collapsed")
 st.markdown(CSS, unsafe_allow_html=True)
 anim.inject_scroll_animations()
@@ -616,6 +670,38 @@ try:
     culture_specs = load_json(ROOT / "data/cultures_reference.json")
 except (ValueError, RuntimeError) as exc:
     st.error(str(exc))
+    st.stop()
+
+view = _resolve_view()
+st.markdown(navbar_html(view), unsafe_allow_html=True)
+
+if view == "accueil":
+    st.markdown(hero_html(), unsafe_allow_html=True)
+    st.markdown(stats_band_html(), unsafe_allow_html=True)
+    st.markdown(about_html(), unsafe_allow_html=True)
+    st.markdown(values_html(), unsafe_allow_html=True)
+    st.markdown(expertise_html(), unsafe_allow_html=True)
+    st.markdown(approach_html(), unsafe_allow_html=True)
+    st.markdown(cta_html(), unsafe_allow_html=True)
+    st.markdown(footer_html(), unsafe_allow_html=True)
+    st.stop()
+
+if view == "donnees":
+    render_datahub_view(graph, culture_specs)
+    st.stop()
+
+if view == "contact":
+    st.markdown(
+        '<div class="site-contact"><h1>Discuter d’une parcelle, d’un territoire ou du projet</h1>'
+        '<p>Le prototype fonctionne sur des données de démonstration. Pour une expérimentation sur votre exploitation ou votre territoire, écrivez-nous.</p>'
+        '<div class="site-contact-grid">'
+        '<div class="site-contact-card"><span>ÉQUIPE</span><h3>Terroir Context Agents</h3><p>Hackathon Build with DataHub — édition 2026</p></div>'
+        '<div class="site-contact-card"><span>CODE & DONNÉES</span><h3>github.com/faten-elouta/Agriculteur</h3><p>Application, graphe de contexte, fixtures et tests ouverts</p></div>'
+        '<div class="site-contact-card"><span>LIVE</span><h3>terroir-context-agents.vercel.app</h3><p>Application complète : tunnel, scénario météo, audits</p></div>'
+        '</div></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(footer_html(), unsafe_allow_html=True)
     st.stop()
 
 weather_state = compute_header_state(st.session_state)
