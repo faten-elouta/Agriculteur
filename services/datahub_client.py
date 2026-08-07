@@ -19,6 +19,7 @@ injoignable ou que la réponse est inattendue.
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import urllib.parse
@@ -39,6 +40,7 @@ class DataHubClient:
         self.token = token if token is not None else os.getenv("DATAHUB_TOKEN", "")
         self.timeout = timeout
         self.enabled = bool(self.gms_url)
+        self._sdk_graph: Any = None
 
     # ------------------------------------------------------------------ HTTP
     def _request(self, method: str, path: str, body: dict[str, Any] | None = None) -> Any:
@@ -58,6 +60,18 @@ class DataHubClient:
                 return json.loads(payload) if payload else None
         except Exception:
             return None
+
+    # ------------------------------------------------------------------- SDK
+    def _graph(self) -> Any:
+        """Instance SDK DataHub (acryl-datahub), pour la recherche et la lecture
+        d'aspects que le sous-ensemble REST maison n'expose pas. Import tardif :
+        une app qui ne fait ni recherche ni lecture d'entité n'a jamais besoin
+        du SDK complet."""
+        if self._sdk_graph is None:
+            from datahub.ingestion.graph.client import DatahubClientConfig, DataHubGraph
+
+            self._sdk_graph = DataHubGraph(DatahubClientConfig(server=self.gms_url, token=self.token or None))
+        return self._sdk_graph
 
     # ---------------------------------------------------------------- lecture
     def connected(self) -> bool:
@@ -104,6 +118,48 @@ class DataHubClient:
             direction = (relation.get("type") or "").upper()
             edges.append({"urn": target, "direction": "UPSTREAM" if "UPSTREAM" in direction else "DOWNSTREAM"})
         return edges
+
+    def search_entities(
+        self,
+        query: str = "*",
+        entity_type: str = "DATASET",
+        platform: str | None = None,
+        count: int = 100,
+    ) -> list[dict[str, Any]]:
+        """Recherche d'URNs par type/plateforme (SDK `get_urns_by_filter`)."""
+        if not self.enabled:
+            return []
+        try:
+            urns = self._graph().get_urns_by_filter(
+                entity_types=[entity_type.lower()] if entity_type else None,
+                platform=platform,
+                query=query,
+            )
+            return [{"urn": urn} for urn in itertools.islice(urns, count)]
+        except Exception:
+            return []
+
+    def get_entity(self, urn: str, aspects: list[str] | None = None) -> dict[str, Any] | None:
+        """Aspects bruts (dict) d'une entité, ou None si absente/injoignable.
+
+        Utilise `get_entities_v2` du SDK DataHub et déballe chaque aspect de son
+        enveloppe `{"value": ...}` pour renvoyer directement les champs attendus
+        par les appelants (ex. `props["datasetProperties"]["name"]`).
+        """
+        if not self.enabled:
+            return None
+        parts = urn.split(":")
+        if len(parts) < 3:
+            return None
+        entity_name = parts[2]
+        try:
+            result = self._graph().get_entities_v2(entity_name, [urn], aspects=aspects or [])
+        except Exception:
+            return None
+        raw = result.get(urn)
+        if not raw:
+            return None
+        return {name: (value.get("value", value) if isinstance(value, dict) else value) for name, value in raw.items()}
 
     # ---------------------------------------------------------------- écriture
     def upsert_dataset_properties(self, urn: str, custom_properties: dict[str, str], description: str | None = None) -> bool:

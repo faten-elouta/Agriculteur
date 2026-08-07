@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Suite de tests (app + services)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: pytest -q
+
+  mcp-server-smoke:
+    name: Fumée du serveur MCP (boot réel + boucle agent)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Environnement minimal du serveur (gms/requirements.txt), pas requirements.txt
+      # racine : c'est exactement ce que construit gms/Dockerfile pour Render, donc
+      # ce job vérifie ce qui tourne réellement en production, pas l'environnement dev.
+      - run: pip install -r gms/requirements.txt
+      - run: pip install "mcp>=2"
+
+      - name: Démarre le serveur GMS + MCP (streamable HTTP) en arrière-plan
+        run: |
+          nohup uvicorn gms.main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8000/health && exit 0
+            sleep 1
+          done
+          echo "Le serveur GMS n'a pas répondu à /health" && exit 1
+
+      - name: Vérifie les 11 datasets via l'API GMS
+        run: |
+          count=$(curl -sf http://127.0.0.1:8000/ | python3 -c "import json,sys; print(json.load(sys.stdin)['datasets'])")
+          test "$count" = "11" || { echo "attendu 11 datasets, trouvé $count"; exit 1; }
+
+      # Rejoue la démo agent réelle du dépôt contre le serveur qu'on vient de démarrer :
+      # même code que celui documenté dans le README et examples/README.md, pas un
+      # test ad hoc. Couvre les 8 outils MCP (list/get/lineage/freshness/emit_run/
+      # incident create+resolve/list) en conditions réelles de protocole streamable HTTP.
+      - name: Boucle de supervision réelle via MCP (examples/mcp_agent_demo.py)
+        run: MCP_URL=http://127.0.0.1:8000/mcp python3 examples/mcp_agent_demo.py
+
+      - name: Logs du serveur (en cas d'échec)
+        if: failure()
+        run: cat server.log

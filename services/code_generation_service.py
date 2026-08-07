@@ -344,8 +344,8 @@ def ingest_{ds.name}():
     """Ingest {ds.name} from {ds.platform}."""
     # TODO: Implement actual ingestion logic
     # Example: spark.read.format("{ds.platform}").load(...).writeToDataHub()
-    print(f"Ingesting {{ds.name}}")
-    return "{{ds.name}}"
+    print("Ingesting {ds.name}")
+    return "{ds.name}"
 
 ingest_{ds.name}_task = PythonOperator(
     task_id='ingest_{ds.name}',

@@ -1,5 +1,7 @@
 # Terroir Context Agents
 
+[![CI](https://github.com/faten-elouta/Agriculteur/actions/workflows/ci.yml/badge.svg)](https://github.com/faten-elouta/Agriculteur/actions/workflows/ci.yml)
+
 Terroir Context Agents aide à comparer trois cultures **avant le semis** en
 positionnant leur stade de besoin critique face à une tension saisonnière sur
 l'eau. Les chiffres sont calculés en Python, datés, puis reliés à leur provenance.

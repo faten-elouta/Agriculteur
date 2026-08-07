@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from unittest.mock import MagicMock
 from urllib.parse import unquote, urlparse
 
 import pytest
@@ -124,6 +125,8 @@ def test_repli_local_sans_gms():
     assert client.upsert_dataset_properties(HYDRO_URN, {"a": "b"}) is False
     assert client.create_incident("t", "d", HYDRO_URN) is None
     assert client.resolve_incident("urn:li:incident:(x,1)") is False
+    assert client.search_entities() == []
+    assert client.get_entity(HYDRO_URN) is None
 
 
 def test_connected(fake_gms):
@@ -195,3 +198,77 @@ def test_freshness_summary(fake_gms):
     assert summary["ok"] == 1
     assert summary["stale"] == 1
     assert summary["unknown"] == 1
+
+
+# ---------------------------------------------------------------------------
+# search_entities / get_entity : passent par le SDK acryl-datahub (get_urns_by_filter,
+# get_entities_v2), pas par le sous-ensemble REST maison. On simule le SDK plutôt que
+# le réseau — c'est la même frontière que agents.sentinelle.LiveBackend teste ailleurs.
+# ---------------------------------------------------------------------------
+
+def _client_with_fake_graph(fake_graph: MagicMock) -> DataHubClient:
+    client = DataHubClient(gms_url="http://fake-gms:8080", token="")
+    client._sdk_graph = fake_graph
+    return client
+
+
+def test_search_entities_appelle_get_urns_by_filter():
+    fake_graph = MagicMock()
+    fake_graph.get_urns_by_filter.return_value = iter([HYDRO_URN, RECO_URN])
+    client = _client_with_fake_graph(fake_graph)
+
+    results = client.search_entities(query="*", entity_type="DATASET", platform="duckdb", count=10)
+
+    assert results == [{"urn": HYDRO_URN}, {"urn": RECO_URN}]
+    fake_graph.get_urns_by_filter.assert_called_once_with(entity_types=["dataset"], platform="duckdb", query="*")
+
+
+def test_search_entities_tronque_a_count():
+    fake_graph = MagicMock()
+    fake_graph.get_urns_by_filter.return_value = iter([HYDRO_URN, RECO_URN, "urn:li:dataset:(x,y,PROD)"])
+    client = _client_with_fake_graph(fake_graph)
+
+    assert client.search_entities(count=2) == [{"urn": HYDRO_URN}, {"urn": RECO_URN}]
+
+
+def test_search_entities_erreur_sdk_renvoie_liste_vide():
+    fake_graph = MagicMock()
+    fake_graph.get_urns_by_filter.side_effect = RuntimeError("gms down")
+    client = _client_with_fake_graph(fake_graph)
+
+    assert client.search_entities() == []
+
+
+def test_get_entity_deballe_les_aspects():
+    fake_graph = MagicMock()
+    fake_graph.get_entities_v2.return_value = {
+        HYDRO_URN: {
+            "datasetProperties": {"value": {"name": "hubeau_hydrometrie", "customProperties": {"owner": "data-team"}}},
+            "status": {"value": {"removed": False}},
+        }
+    }
+    client = _client_with_fake_graph(fake_graph)
+
+    entity = client.get_entity(HYDRO_URN, aspects=["datasetProperties", "status"])
+
+    assert entity == {
+        "datasetProperties": {"name": "hubeau_hydrometrie", "customProperties": {"owner": "data-team"}},
+        "status": {"removed": False},
+    }
+    fake_graph.get_entities_v2.assert_called_once_with("dataset", [HYDRO_URN], aspects=["datasetProperties", "status"])
+
+
+def test_get_entity_urn_absente():
+    fake_graph = MagicMock()
+    fake_graph.get_entities_v2.return_value = {}
+    client = _client_with_fake_graph(fake_graph)
+
+    assert client.get_entity(HYDRO_URN) is None
+
+
+def test_get_entity_erreur_sdk_renvoie_none():
+    fake_graph = MagicMock()
+    fake_graph.get_entities_v2.side_effect = RuntimeError("gms down")
+    client = _client_with_fake_graph(fake_graph)
+
+    assert client.get_entity(HYDRO_URN) is None

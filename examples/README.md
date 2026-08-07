@@ -17,6 +17,32 @@ avec la bibliothèque standard uniquement :
 python examples/gms_demo.py
 ```
 
+## `generate_from_fixture.py` — génération de code metadata-aware
+
+Exécute la même logique que `services/code_generation_service.py`
+(`generate_ingestion_recipe`, `generate_transformation_sql`, `generate_airflow_dag`)
+sur les 11 datasets réels du graphe de contexte Terroir (`fixtures/graph.json` —
+le même graphe ingéré dans DataHub par `catalog/ingest_datahub.py`), sans
+nécessiter d'instance DataHub en cours d'exécution :
+
+```bash
+.venv/bin/python examples/generate_from_fixture.py
+```
+
+Produit `examples/generated/` : recettes d'ingestion YAML par dataset (licence,
+SLA, propriétés réelles), SQL de transformation, et un DAG Airflow avec les
+dépendances dérivées du lineage réel (`climat_journalier → … → features_bilan_hydrique
+→ … → recommandations_parcelle`). Le schéma de colonnes n'est pas suivi dans ce
+graphe et n'est donc pas inventé (`fields=[]`).
+
+Contre un DataHub en direct, `CodeGenerationService` lit en plus les schémas de
+colonnes, tags et modèles ML réels via `DataHubClient.search_entities` /
+`get_entity` (SDK `acryl-datahub`) :
+
+```bash
+DATAHUB_GMS_URL=http://localhost:8080 .venv/bin/python services/code_generation_service.py
+```
+
 ## `mcp_agent_demo.py` — agent de supervision piloté par MCP
 
 L'agent se connecte au **serveur MCP** du même graphe

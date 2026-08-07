@@ -47,7 +47,10 @@ def parse_json(text: str) -> dict:
 
 async def main() -> int:
     print(f"Agent de supervision — connexion MCP : {MCP_URL}\n")
-    async with streamable_http_client(MCP_URL) as (read, write, _):
+    # mcp >= 2.0 ne renvoie plus l'id de session dans le contexte
+    # (streamable HTTP : l'id est géré par la session) ; mcp 1.x en renvoie un 3e.
+    async with streamable_http_client(MCP_URL) as streams:
+        read, write = streams[0], streams[1]
         async with ClientSession(read, write) as session:
             await session.initialize()
             tools = await session.list_tools()

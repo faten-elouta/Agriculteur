@@ -1,0 +1,33 @@
+source:
+  type: duckdb
+  config:
+    platform_instance: prod
+    database: ''
+    schema: public
+    table: climat_journalier
+sink:
+  type: datahub-rest
+  config:
+    server: ${DATAHUB_GMS_URL}
+    token: ${DATAHUB_TOKEN}
+transformers:
+- type: simple_add_dataset_ownership
+  config:
+    ownership:
+    - owner: data-team
+      type: TECHNICAL_OWNER
+- type: add_dataset_tags
+  config:
+    tags: []
+- type: add_dataset_glossary_terms
+  config:
+    terms: []
+- type: add_dataset_properties
+  config:
+    properties:
+      niveau_de_preuve: modelisation
+      freshness_sla_days: '10'
+      last_updated: '2026-07-27'
+      spatial_coverage: Nouvel Espace Cher
+      licence: Snapshot synthetique derive de normales publiques
+      redistribuable: oui (synthetique)
