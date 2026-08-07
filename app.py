@@ -46,6 +46,7 @@ from ui.step_nav import render_step_indicator
 from ui.supervision_console import render_supervision_console
 from ui.water_chart import render_water_chart
 from ui.site_sections import (
+    app_hero_html,
     approach_html,
     about_html,
     cta_html,
@@ -53,11 +54,12 @@ from ui.site_sections import (
     footer_html,
     hero_html,
     navbar_html,
+    section_header_html,
     stats_band_html,
     values_html,
 )
 from ui.styles import CSS
-from ui.weather_scene import compute_header_state, render_header_scene, render_grass_band
+from ui.weather_scene import render_grass_band
 from ui import animations as anim
 
 ROOT = Path(__file__).resolve().parent
@@ -712,15 +714,9 @@ if view == "contact":
     st.markdown(footer_html(), unsafe_allow_html=True)
     st.stop()
 
-weather_state = compute_header_state(st.session_state)
-hero = render_header_scene(weather_state, "PRÉPARER MON PROCHAIN SEMIS", "Quelle culture choisir pour ma parcelle ?")
-# En-tête : parallaxe douce au scroll (7) + séquence d'intro au chargement (14) + zoom arrière (6).
-st.markdown(
-    '<div class="parallax-container"><div class="parallax-image"><div class="page-intro">'
-    f'<div class="animate-scale-down">{hero}</div>'
-    "</div></div></div>",
-    unsafe_allow_html=True,
-)
+# --- Vue Application : hero façon site + tunnel en sections -----------------
+st.markdown(app_hero_html(), unsafe_allow_html=True)
+st.markdown(stats_band_html(), unsafe_allow_html=True)
 
 demo_col, stop_col = st.columns([6, 2])
 with demo_col:
@@ -749,6 +745,14 @@ if step > 1:
 
 # --- Étape 1 : tunnel assolement en 4 écrans ------------------------------
 if step == 1:
+    st.markdown(
+        section_header_html(
+            "1 · LE TUNNEL DE DÉCISION",
+            "Du terrain au choix de culture",
+            "Quatre écrans : votre parcelle, la réponse chiffrée, les leviers pour éviter la tension sur l'eau, et la provenance de chaque chiffre.",
+        ),
+        unsafe_allow_html=True,
+    )
     tunnel_content = anim.fade_up(tunnel_header_html(st.session_state.assolement_screen, ASSOLEMENT_SCREEN_COUNT))
     if st.session_state.assolement_screen == 4:
         with st.container(key="om_wide"):
@@ -768,14 +772,20 @@ if step == 1:
 elif step == 2:
     result = st.session_state.result
     st.markdown(
+        section_header_html(
+            "2 · LE SCÉNARIO MÉTÉO",
+            "Du semis à la récolte, mois par mois",
+            "Une frise par culture : la météo prévue mois par mois, avec le repère du moment où la culture est la plus exposée.",
+        ),
+        unsafe_allow_html=True,
+    )
+    st.markdown(
         maybe_transition(
-            anim.animated_divider("var(--encre)")
-            + anim.fade_up('<div class="article-divider"><span>SCÉNARIO — DU SEMIS À LA RÉCOLTE</span></div>'),
+            anim.animated_divider("var(--encre)"),
             key="step2",
         ),
         unsafe_allow_html=True,
     )
-    st.caption("Une frise par culture : la météo prévue mois par mois, avec le repère du moment où la culture est la plus exposée.")
     if st.button("▶ Lecture", key="play_timeline"):
         st.session_state.timeline_play_token = st.session_state.get("timeline_play_token", 0) + 1
     play_token = st.session_state.get("timeline_play_token", 0)
@@ -799,10 +809,16 @@ elif step == 3:
     quality = build_quality_certificate(result)
 
     st.markdown(
+        section_header_html(
+            "3 · L'AUDIT TECHNIQUE",
+            "Ce qui a été collecté, rejeté et calculé",
+            "Le détail des chiffres, la confiance, les sources essayées et l'audit des données et des modèles — pour contrôler exactement ce que l'agent a fait.",
+        ),
+        unsafe_allow_html=True,
+    )
+    st.markdown(
         maybe_transition(
-            anim.animated_divider("var(--eau)")
-            + '<div style="height:.2rem;"></div>'
-            + anim.mask_reveal('<div class="report-section-kicker">DÉTAILS TECHNIQUES</div>', tag="div"),
+            anim.animated_divider("var(--eau)"),
             key="step3",
         ),
         unsafe_allow_html=True,
@@ -885,5 +901,8 @@ elif step == 3:
     st.markdown('<div class="final-warning"><strong>Avant de décider</strong><p>Confirmez l’analyse de sol, vos prix, vos charges, votre accès à l’eau et la place de la culture dans votre rotation avec votre conseiller.</p>' + anim.arrow_slide("Voir le projet, les sources et les limites", href="https://github.com/faten-elouta/Agriculteur#readme") + '</div>', unsafe_allow_html=True)
 
     step_nav(prev_step=2, prev_label="← Retour au scénario météo")
+
+st.markdown(cta_html(), unsafe_allow_html=True)
+st.markdown(footer_html(), unsafe_allow_html=True)
 
 _advance_demo()

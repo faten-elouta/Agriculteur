@@ -10,6 +10,7 @@ import html
 
 from ui.site_sections import (
     about_html,
+    app_hero_html,
     approach_html,
     cta_html,
     expertise_html,
@@ -17,6 +18,7 @@ from ui.site_sections import (
     hero_html,
     navbar_html,
     render_landing_html,
+    section_header_html,
     stats_band_html,
     values_html,
 )
@@ -112,6 +114,31 @@ def test_hero_text_is_html_escaped():
 def test_navbar_html_is_not_empty_for_each_tab():
     for tab in ("accueil", "application", "donnees", "contact"):
         assert len(navbar_html(tab)) > 200
+
+
+def test_app_hero_uses_site_language():
+    out = app_hero_html()
+    assert "site-hero" in out
+    assert "L'APPLICATION" in out
+    assert "Choisir sa culture" in out
+    assert "site-hero-card" in out
+    assert "svg" in out
+
+
+def test_app_hero_has_no_clickable_js_nav():
+    out = app_hero_html()
+    assert "data-nav" not in out
+    assert "onclick" not in out
+
+
+def test_section_header_escapes_and_has_lead():
+    out = section_header_html("1 · LE TUNNEL", "Du terrain au choix", "Une phrase d'intro.")
+    assert "site-section-head" in out
+    assert "LE TUNNEL" in out
+    assert "Du terrain au choix" in out
+    assert "Une phrase d'intro." in out
+    assert "site-section-lead" in out
+    assert "data-nav" not in out
 
 
 def test_auto_demo_via_url_starts_sequence():

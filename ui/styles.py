@@ -951,6 +951,35 @@ button[kind="primary"]:hover p, [data-testid="stBaseButton-primary"]:hover p { c
   margin: 0 0 1.4rem;
 }
 .site-hero-cta { display: flex; gap: .7rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
+
+/* Hero de la vue Application : carte SVG à la place du collage photos */
+.site-hero-card {
+  border: 1px solid var(--craie);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+}
+.site-hero-card p {
+  font-size: 12.5px;
+  opacity: .75;
+  margin: .6rem .2rem 0;
+  line-height: 1.5;
+}
+.site-hero-app { padding-bottom: 2.4rem; }
+
+/* En-têtes de section fonctionnelle (même grammaire que l'accueil) */
+.site-section-head {
+  max-width: 1280px;
+  margin: 0 auto 1.2rem;
+  padding-top: .4rem;
+}
+.site-section-head h2 {
+  font: 600 30px/1.2 "IBM Plex Serif", Georgia, serif;
+  margin: 0 0 .4rem;
+}
+.site-section-lead { font-size: 14.5px; opacity: .82; max-width: 760px; margin: 0; }
+
 .site-btn {
   display: inline-block;
   padding: .7rem 1.4rem;

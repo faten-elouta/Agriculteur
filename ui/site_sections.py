@@ -291,6 +291,46 @@ def approach_html() -> str:
     )
 
 
+def app_hero_html() -> str:
+    """Hero de la vue Application : mêmes codes visuels que l'accueil, sans collage."""
+    return (
+        '<section class="site-hero site-hero-app" id="application">'
+        '<div class="site-hero-inner">'
+        '<div class="site-hero-text">'
+        '<div class="site-eyebrow">L\'APPLICATION — LE TUNNEL DE DÉCISION</div>'
+        '<h1 class="site-hero-title">Choisir sa culture avec des <em>preuves</em>, pas des intuitions</h1>'
+        '<p class="site-hero-lead">Saisissez votre commune, chargez les parcelles réelles du RPG et recevez '
+        "une comparaison sourcée des trois cultures : calendrier, eau, marge, confiance. Chaque chiffre est "
+        "tracé jusqu'à sa source dans le graphe DataHub.</p>"
+        '<div class="site-hero-chips">'
+        '<span class="site-chip"><i class="chip-dot sur"></i>parcelles RPG réelles</span>'
+        '<span class="site-chip"><i class="chip-dot eau"></i>3 cultures comparées</span>'
+        '<span class="site-chip"><i class="chip-dot vigilance"></i>certificat de données</span>'
+        "</div>"
+        "</div>"
+        '<div class="site-hero-visual">'
+        '<div class="site-hero-card">'
+        f'{_PARCEL_SVG}'
+        "<p>Parcelle RPG réelle, commune saisie, sources de secours essayées dans l'ordre.</p>"
+        "</div>"
+        "</div>"
+        "</div>"
+        "</section>"
+    )
+
+
+def section_header_html(kicker: str, title: str, lead: str = "") -> str:
+    """En-tête de section fonctionnelle, au format du site (kicker + titre + lead)."""
+    lead_html = f"<p class='site-section-lead'>{lead}</p>" if lead else ""
+    return (
+        f'<div class="site-section-head">'
+        f'<div class="site-eyebrow">{html.escape(kicker)}</div>'
+        f"<h2>{html.escape(title)}</h2>"
+        f"{lead_html}"
+        "</div>"
+    )
+
+
 def cta_html() -> str:
     """Bandeau d'appel à l'action."""
     return (
