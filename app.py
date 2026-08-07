@@ -672,16 +672,25 @@ def render_datahub_view(graph: dict, culture_specs: list[dict]) -> None:
         unsafe_allow_html=True,
     )
     st.markdown(datahub_banner_html(graph), unsafe_allow_html=True)
-    st.markdown(anim.fade_up(kpis_html(graph, result, client)), unsafe_allow_html=True)
-    render_supervision_console(client, graph)
-    st.markdown('<div class="assolement-spine-full">', unsafe_allow_html=True)
-    st.markdown(render_spine(graph, set(st.session_state.get("impacted", []))), unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown(
-        anim.fade_up('<div class="report-subhead">Le graphe de lineage — chaque chiffre a un chemin</div>'),
-        unsafe_allow_html=True,
+
+    kpi_tab, supervision_tab, provenance_tab, lineage_tab = st.tabs(
+        ["KPIs", "Supervision de l'agent", "Provenance", "Graphe de lineage"]
     )
-    st.markdown(lineage_html(graph, impacted_urns=set(st.session_state.get("impacted", []))), unsafe_allow_html=True)
+    with kpi_tab:
+        st.markdown(anim.fade_up(kpis_html(graph, result, client)), unsafe_allow_html=True)
+    with supervision_tab:
+        render_supervision_console(client, graph)
+    with provenance_tab:
+        st.markdown('<div class="assolement-spine-full">', unsafe_allow_html=True)
+        st.markdown(render_spine(graph, set(st.session_state.get("impacted", []))), unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    with lineage_tab:
+        st.markdown(
+            anim.fade_up('<div class="report-subhead">Le graphe de lineage — chaque chiffre a un chemin</div>'),
+            unsafe_allow_html=True,
+        )
+        st.markdown(lineage_html(graph, impacted_urns=set(st.session_state.get("impacted", []))), unsafe_allow_html=True)
+
     st.markdown(cta_html(), unsafe_allow_html=True)
     st.markdown(footer_html(), unsafe_allow_html=True)
 
@@ -844,78 +853,84 @@ elif step == 3:
         unsafe_allow_html=True,
     )
 
-    with st.expander("Voir tous les chiffres et la confiance", expanded=True):
+    numbers_tab, provenance_tab, expert_tab, security_tab = st.tabs(
+        ["Chiffres & confiance", "D'où viennent les données", "Vue experte", "Test de sécurité"]
+    )
+
+    with numbers_tab:
         confidence_dashboard(result)
         st.markdown('<div class="quality-list animate-stagger">' + "".join(f'<div class="quality-{item["level"]}"><span>{item["name"]}</span><b>{item["level"]}</b><small>{item["evidence"]}</small></div>' for item in quality["checks"]) + '</div>', unsafe_allow_html=True)
         st.dataframe([{"Culture": crop["culture"], "Jours à risque": crop["recouvrement_avec_tension_j"], "Eau (mm)": crop["besoin_irrigation_mm"], "Budget irrigation (€/ha)": crop["cout_eau_eur_ha"], "Résultat estimé (€/ha)": crop["marge_brute_eur_ha"]} for crop in result["cultures"]], hide_index=True, width="stretch")
-    with st.expander("D’où viennent les données ?"):
+
+    with provenance_tab:
         st.markdown(render_spine(graph, set(st.session_state.get("impacted", []))), unsafe_allow_html=True)
         st.markdown("#### Sources de secours essayées")
         for attempt in result.get("resolution_log", []):
             symbol = "✓" if "utilisée" in attempt["status"] else "→"
             st.write(f'{symbol} **{attempt["field"].capitalize()}** — {attempt["source"]} : {attempt["status"]}')
 
-    st.markdown('<div class="expert-divider"><span>VUE EXPERTE</span><h2>Audit des données et des modèles</h2><p>Cette section reste visible pour contrôler exactement ce qui a été collecté, rejeté et calculé.</p></div>', unsafe_allow_html=True)
-    expert = build_expert_report(result)
-    st.markdown(f'<div class="expert-heading"><div><span>SCORE TECHNIQUE MOYEN</span><strong>{anim.count_up_number(expert["overall_score"])}<span style="opacity:.6">/100</span></strong></div><p>Ce score résume la qualité technique des entrées. Il ne prédit pas le rendement futur.</p></div>', unsafe_allow_html=True)
-    collected_tab, failed_tab, models_tab, scores_tab = st.tabs(["Données collectées", "Sources en échec", "Modèles utilisés", "Scores"])
-    with collected_tab:
-        st.write("Valeurs et métadonnées effectivement utilisées dans ce calcul.")
-        st.dataframe(expert["collected"], hide_index=True, width="stretch")
-    with failed_tab:
-        st.write("Sources essayées mais non retenues avant le passage à la source suivante.")
-        if expert["failures"]:
-            st.dataframe(expert["failures"], hide_index=True, width="stretch")
-        else:
-            st.success("Aucun échec de source enregistré sur cette exécution.")
-    with models_tab:
-        st.write("Modèles et formules utilisés pour produire les chiffres.")
-        st.dataframe(expert["models"], hide_index=True, width="stretch")
-        with st.expander("Paramètres du scénario"):
-            st.json({"parcelle": result["parcelle_id"], "semis": result["date_semis"], "horizon_mois": result["horizon_mois"], "sol": result["sol"], "fenetre_de_tension": result["fenetre_de_tension"]})
-    with scores_tab:
-        st.write("Barème : élevée = 100, moyenne = 65, faible = 30, insuffisante = 0.")
-        st.dataframe(expert["scores"], hide_index=True, width="stretch")
-        st.caption("Le score moyen ne remplace pas la porte de confiance : une source critique peut bloquer tous les résultats.")
+    with expert_tab:
+        expert = build_expert_report(result)
+        st.markdown(f'<div class="expert-heading"><div><span>SCORE TECHNIQUE MOYEN</span><strong>{anim.count_up_number(expert["overall_score"])}<span style="opacity:.6">/100</span></strong></div><p>Ce score résume la qualité technique des entrées. Il ne prédit pas le rendement futur.</p></div>', unsafe_allow_html=True)
+        collected_tab, failed_tab, models_tab, scores_tab = st.tabs(["Données collectées", "Sources en échec", "Modèles utilisés", "Scores"])
+        with collected_tab:
+            st.write("Valeurs et métadonnées effectivement utilisées dans ce calcul.")
+            st.dataframe(expert["collected"], hide_index=True, width="stretch")
+        with failed_tab:
+            st.write("Sources essayées mais non retenues avant le passage à la source suivante.")
+            if expert["failures"]:
+                st.dataframe(expert["failures"], hide_index=True, width="stretch")
+            else:
+                st.success("Aucun échec de source enregistré sur cette exécution.")
+        with models_tab:
+            st.write("Modèles et formules utilisés pour produire les chiffres.")
+            st.dataframe(expert["models"], hide_index=True, width="stretch")
+            with st.expander("Paramètres du scénario"):
+                st.json({"parcelle": result["parcelle_id"], "semis": result["date_semis"], "horizon_mois": result["horizon_mois"], "sol": result["sol"], "fenetre_de_tension": result["fenetre_de_tension"]})
+        with scores_tab:
+            st.write("Barème : élevée = 100, moyenne = 65, faible = 30, insuffisante = 0.")
+            st.dataframe(expert["scores"], hide_index=True, width="stretch")
+            st.caption("Le score moyen ne remplace pas la porte de confiance : une source critique peut bloquer tous les résultats.")
 
-    st.markdown(anim.fade_up(anim.card_hover('<section class="sentinel-box"><div><div class="section-kicker">TEST DE SÉCURITÉ</div><h3>Que se passe-t-il si une station ne répond plus ?</h3><p>La Sentinelle suit les calculs dépendants et barre automatiquement les recommandations devenues fragiles.</p></div></section>')), unsafe_allow_html=True)
-    if st.button("Simuler une panne de station", width="stretch"):
-        simulation = simulate_station_failure(ROOT / "fixtures/graph.json", ROOT / "reports", len(result["cultures"]), date(2026, 7, 30))
-        st.session_state.impacted = simulation["impacted"]
-        st.session_state.failure_message = f"{simulation['invalidated']} recommandations invalidées. Rapport d’impact enregistré."
-        st.session_state.last_simulation = simulation
-        st.session_state.incident_urn = get_datahub_client().create_incident(
-            "Panne simulée : station hydrométrique hors délai",
-            f"{simulation['invalidated']} recommandation(s) invalidée(s) — impact propagé le long du lineage : hubeau_hydrometrie → features_bilan_hydrique → scenarios_cultures → recommandations_parcelle.",
-            HYDRO_URN,
-        )
-        st.rerun()
-    if st.session_state.get("failure_message"):
-        simulation = st.session_state.get("last_simulation", {})
-        st.error(st.session_state.failure_message)
-        if st.session_state.get("incident_urn"):
-            st.caption(f"Incident ouvert dans le graphe DataHub : {st.session_state['incident_urn']}")
-        impacted_names = [urn.split(",")[1] if "," in urn else urn for urn in simulation.get("impacted", [])]
-        flow_items = [
-            '<span class="cascade-node" style="--fc-i:0;"><b>1</b> hubeau_hydrometrie<br><small>station simulée hors délai</small></span>',
-            '<i class="cascade-arrow" style="--fc-i:1;">→</i>',
-            '<span class="cascade-node" style="--fc-i:2;"><b>2</b> features_bilan_hydrique<br><small>calcul d’eau invalidé</small></span>',
-            '<i class="cascade-arrow" style="--fc-i:3;">→</i>',
-            '<span class="cascade-node" style="--fc-i:4;"><b>3</b> scenarios_cultures<br><small>scénarios invalidés</small></span>',
-            '<i class="cascade-arrow" style="--fc-i:5;">→</i>',
-            '<span class="cascade-node" style="--fc-i:6;"><b>4</b> recommandations<br><small>résultats barrés</small></span>',
-        ]
-        cascade_total = 4
-        st.markdown(
-            f'<div class="failure-cascade">'
-            f'<div class="cascade-impact">impact linéaire : <b class="animate-count-up" data-target="{cascade_total}">0</b> entités invalidées</div>'
-            f'<div class="failure-flow">{"".join(flow_items)}</div></div>',
-            unsafe_allow_html=True,
-        )
-        st.write("**Éléments touchés :** " + ", ".join(impacted_names))
-        if simulation.get("report_path"):
-            st.code(simulation["report_path"], language=None)
-        st.button("Rétablir la station et recalculer", type="primary", width="stretch", on_click=restore_station)
+    with security_tab:
+        st.markdown(anim.fade_up(anim.card_hover('<section class="sentinel-box"><div><div class="section-kicker">TEST DE SÉCURITÉ</div><h3>Que se passe-t-il si une station ne répond plus ?</h3><p>La Sentinelle suit les calculs dépendants et barre automatiquement les recommandations devenues fragiles.</p></div></section>')), unsafe_allow_html=True)
+        if st.button("Simuler une panne de station", width="stretch"):
+            simulation = simulate_station_failure(ROOT / "fixtures/graph.json", ROOT / "reports", len(result["cultures"]), date(2026, 7, 30))
+            st.session_state.impacted = simulation["impacted"]
+            st.session_state.failure_message = f"{simulation['invalidated']} recommandations invalidées. Rapport d’impact enregistré."
+            st.session_state.last_simulation = simulation
+            st.session_state.incident_urn = get_datahub_client().create_incident(
+                "Panne simulée : station hydrométrique hors délai",
+                f"{simulation['invalidated']} recommandation(s) invalidée(s) — impact propagé le long du lineage : hubeau_hydrometrie → features_bilan_hydrique → scenarios_cultures → recommandations_parcelle.",
+                HYDRO_URN,
+            )
+            st.rerun()
+        if st.session_state.get("failure_message"):
+            simulation = st.session_state.get("last_simulation", {})
+            st.error(st.session_state.failure_message)
+            if st.session_state.get("incident_urn"):
+                st.caption(f"Incident ouvert dans le graphe DataHub : {st.session_state['incident_urn']}")
+            impacted_names = [urn.split(",")[1] if "," in urn else urn for urn in simulation.get("impacted", [])]
+            flow_items = [
+                '<span class="cascade-node" style="--fc-i:0;"><b>1</b> hubeau_hydrometrie<br><small>station simulée hors délai</small></span>',
+                '<i class="cascade-arrow" style="--fc-i:1;">→</i>',
+                '<span class="cascade-node" style="--fc-i:2;"><b>2</b> features_bilan_hydrique<br><small>calcul d’eau invalidé</small></span>',
+                '<i class="cascade-arrow" style="--fc-i:3;">→</i>',
+                '<span class="cascade-node" style="--fc-i:4;"><b>3</b> scenarios_cultures<br><small>scénarios invalidés</small></span>',
+                '<i class="cascade-arrow" style="--fc-i:5;">→</i>',
+                '<span class="cascade-node" style="--fc-i:6;"><b>4</b> recommandations<br><small>résultats barrés</small></span>',
+            ]
+            cascade_total = 4
+            st.markdown(
+                f'<div class="failure-cascade">'
+                f'<div class="cascade-impact">impact linéaire : <b class="animate-count-up" data-target="{cascade_total}">0</b> entités invalidées</div>'
+                f'<div class="failure-flow">{"".join(flow_items)}</div></div>',
+                unsafe_allow_html=True,
+            )
+            st.write("**Éléments touchés :** " + ", ".join(impacted_names))
+            if simulation.get("report_path"):
+                st.code(simulation["report_path"], language=None)
+            st.button("Rétablir la station et recalculer", type="primary", width="stretch", on_click=restore_station)
 
     st.markdown(render_grass_band(), unsafe_allow_html=True)
     st.markdown('<div class="final-warning"><strong>Avant de décider</strong><p>Confirmez l’analyse de sol, vos prix, vos charges, votre accès à l’eau et la place de la culture dans votre rotation avec votre conseiller.</p>' + anim.arrow_slide("Voir le projet, les sources et les limites", href="https://github.com/faten-elouta/Agriculteur#readme") + '</div>', unsafe_allow_html=True)
