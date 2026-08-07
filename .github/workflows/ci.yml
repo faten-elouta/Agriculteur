@@ -32,6 +32,10 @@ jobs:
       # ce job vérifie ce qui tourne réellement en production, pas l'environnement dev.
       # mcp est épinglé <2 : fastmcp 3.x ne supporte pas mcp 2.0 (request_ctx retiré).
       - run: pip install -r gms/requirements.txt
+      # SDK acryl-datahub uniquement pour l'étape de vérification du contrat
+      # (get_urns_by_filter → GraphQL, get_entities_v2 → OpenAPI v2 batch) :
+      # c'est la même frontière que le mode réel du serveur MCP en production.
+      - run: pip install "acryl-datahub>=0.13,<2"
 
       - name: Démarre le serveur GMS + MCP (streamable HTTP) en arrière-plan, en mode réel
         run: |
