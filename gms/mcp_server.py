@@ -3,7 +3,8 @@
 Expose le même graphe que l'API GMS via le protocole MCP, pour qu'un agent
 (Claude Desktop, MCP Inspector, script, ...) puisse :
 
-- lire le contexte : datasets, fraîcheur vs SLA, lineage amont/aval,
+- lire le contexte : datasets, fraîcheur vs SLA, lineage amont/aval, Skills
+  DataHub (agent_context pour l'Agent Context Kit),
 - agir : tracer un run, créer/résoudre un incident sur les assets,
 - écrire le résultat dans le graphe pour les agents suivants.
 
@@ -37,6 +38,7 @@ from typing import Any
 from fastmcp import FastMCP
 
 import gms.main as gm
+from services.agent_context_service import AgentContextService
 from services.datahub_client import DataHubClient
 
 mcp = FastMCP("terroir-context")
@@ -164,6 +166,62 @@ class _InMemoryBackend:
             for urn, incident in gm._INCIDENTS.items()
         ]
 
+    # ------------------------------------------------------------------ skills
+    def list_skills(self) -> list[dict[str, Any]]:
+        return [
+            self._skill_view(urn)
+            for urn in sorted(gm._SKILLS)
+        ]
+
+    def get_skill(self, skill_id: str) -> dict[str, Any] | None:
+        urn = skill_id if skill_id.startswith("urn:li:agentSkill:") else f"urn:li:agentSkill:{skill_id}"
+        return self._skill_view(urn) if urn in gm._SKILLS else None
+
+    def _skill_view(self, urn: str) -> dict[str, Any] | None:
+        skill = gm._SKILLS.get(urn)
+        if skill is None:
+            return None
+        return {
+            "urn": urn,
+            "id": urn.removeprefix("urn:li:agentSkill:"),
+            "name": skill.get("name"),
+            "description": skill.get("description", ""),
+            "instructions": skill.get("instructions", ""),
+            "sourceRepository": skill.get("sourceRepository"),
+            "requiredTools": skill.get("requiredTools") or [],
+        }
+
+    def register_skill(
+        self,
+        skill_id: str,
+        name: str,
+        description: str = "",
+        instructions: str = "",
+        source_url: str | None = None,
+        source_path: str | None = None,
+    ) -> dict[str, Any]:
+        urn = skill_id if skill_id.startswith("urn:li:agentSkill:") else f"urn:li:agentSkill:{skill_id}"
+        info: dict[str, Any] = {"urn": urn, "name": name, "description": description, "instructions": instructions}
+        if source_url or source_path:
+            info["sourceRepository"] = {"url": source_url or "", "path": source_path}
+        gm._SKILLS[urn] = info
+        return {"ok": True, "skill_urn": urn}
+
+    def agent_context(self, dataset_names: list[str] | None = None) -> dict[str, Any]:
+        bundle: dict[str, Any] = {
+            "agent": {"id": "terroir-context-agents", "urn": "urn:li:aiAgent:terroir-context-agents"},
+            "skills": self.list_skills(),
+            "freshness": None,
+            "lineage": {},
+        }
+        if dataset_names:
+            bundle["freshness"] = self.freshness_summary()
+            for name in dataset_names:
+                lineage = self.get_lineage(name)
+                if lineage:
+                    bundle["lineage"][name] = {"upstream": lineage["upstream"], "downstream": lineage["downstream"]}
+        return bundle
+
 
 class _RealHubBackend:
     """Graphe réel d'un GMS DataHub, lu et écrit via DataHubClient (REST + SDK)."""
@@ -277,6 +335,60 @@ class _RealHubBackend:
             )
         return incidents
 
+    # ------------------------------------------------------------------ skills
+    def list_skills(self) -> list[dict[str, Any]]:
+        return self.client.list_skills()
+
+    def get_skill(self, skill_id: str) -> dict[str, Any] | None:
+        return self.client.get_skill(skill_id)
+
+    def register_skill(
+        self,
+        skill_id: str,
+        name: str,
+        description: str = "",
+        instructions: str = "",
+        source_url: str | None = None,
+        source_path: str | None = None,
+    ) -> dict[str, Any]:
+        if not self.client.upsert_skill(
+            skill_id, name, description=description, instructions=instructions,
+            source_url=source_url, source_path=source_path,
+        ):
+            return {"ok": False, "error": f"GMS injoignable : {self.client.gms_url}"}
+        urn = skill_id if skill_id.startswith("urn:li:agentSkill:") else f"urn:li:agentSkill:{skill_id}"
+        return {"ok": True, "skill_urn": urn}
+
+    def agent_context(self, dataset_names: list[str] | None = None) -> dict[str, Any]:
+        service = AgentContextService(self.client)
+        skill_ids = [skill["id"] for skill in self.client.list_skills()] or None
+        dataset_urns: list[str] | None = []
+        if dataset_names:
+            for name in dataset_names:
+                urn = self._find_urn(name)
+                if urn:
+                    dataset_urns.append(urn)
+        else:
+            dataset_urns = None
+        bundle = service.context_for(skill_ids=skill_ids, dataset_urns=dataset_urns)
+        bundle["lineage"] = {
+            _short_name(urn): {
+                "upstream": [_short_name(u) for u in edges.get("upstream", [])],
+                "downstream": [_short_name(d) for d in edges.get("downstream", [])],
+            }
+            for urn, edges in bundle["lineage"].items()
+        }
+        fresh = bundle.get("freshness")
+        if fresh:
+            bundle["freshness"] = {
+                **fresh,
+                "sources": {
+                    _short_name(urn): {**info, "urn": urn}
+                    for urn, info in (fresh.get("sources") or {}).items()
+                },
+            }
+        return bundle
+
 
 def _backend() -> _InMemoryBackend | _RealHubBackend:
     """Mode réel (vrai GMS DataHub) si DATAHUB_GMS_URL est défini, sinon démo mémoire."""
@@ -331,6 +443,45 @@ def resolve_incident(incident_urn: str) -> dict[str, Any]:
 def list_incidents() -> list[dict[str, Any]]:
     """Liste des incidents (actifs et résolus) écrits dans le graphe."""
     return _backend().list_incidents()
+
+
+# ---------------------------------------------------------------------------
+# DataHub Skills et Agent Context Kit : les agents découvrent et reçoivent les
+# instructions cataloguées dans le graphe (entités AgentSkill + AIAgent).
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def list_skills() -> list[dict[str, Any]]:
+    """Liste les Skills DataHub catalogués (id, nom, description, source)."""
+    return _backend().list_skills()
+
+
+@mcp.tool()
+def get_skill(skill_id: str) -> dict[str, Any] | None:
+    """Instructions complètes d'un Skill par son id (ex. 'freshness_sla')."""
+    return _backend().get_skill(skill_id)
+
+
+@mcp.tool()
+def register_skill(
+    skill_id: str,
+    name: str,
+    description: str,
+    instructions: str,
+    source_url: str | None = None,
+    source_path: str | None = None,
+) -> dict[str, Any]:
+    """Enregistre un Skill dans le graphe (urn:li:agentSkill:<id>, aspect agentSkillInfo)."""
+    return _backend().register_skill(skill_id, name, description, instructions, source_url, source_path)
+
+
+@mcp.tool()
+def agent_context(dataset_names: list[str] | None = None) -> dict[str, Any]:
+    """Bundle de contexte pour un agent : skills catalogués + fraîcheur + lineage des datasets nommés.
+
+    C'est l'Agent Context Kit : un seul objet à injecter dans le prompt d'un agent.
+    """
+    return _backend().agent_context(dataset_names)
 
 
 def graph_fixture_dump() -> None:

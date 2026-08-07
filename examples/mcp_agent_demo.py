@@ -57,6 +57,15 @@ async def main() -> int:
             names = [t.name for t in tools.tools]
             print(f"Outils MCP disponibles ({len(names)}) : {', '.join(names)}\n")
 
+            print("ÉTAPE 0 — Agent Context Kit : l'agent charge ses Skills et son contexte")
+            skills = parse_json(await call(session, "list_skills", {}))
+            print(f"  skills catalogués ({len(skills)}) : {', '.join(s['id'] for s in skills)}")
+            freshness_skill = next((s for s in skills if s["id"] == "freshness_sla"), None)
+            if freshness_skill:
+                print(f"  -> procédure chargée : « {freshness_skill['name']} »")
+            context = parse_json(await call(session, "agent_context", {"dataset_names": ["hubeau_hydrometrie"]}))
+            print(f"  bundle de contexte : agent {context['agent']['urn']} · {len(context['skills'])} skills · fraîcheur : {bool(context['freshness'])}")
+
             print("ÉTAPE 1 — l'agent lit la fraîcheur des 8 sources")
             freshness = parse_json(await call(session, "freshness_summary", {}))
             stale = [name for name, info in freshness["sources"].items() if info["status"] == "stale"]

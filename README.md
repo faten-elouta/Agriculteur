@@ -91,6 +91,8 @@ export DATAHUB_GMS_URL=http://localhost:8080   # ou votre instance hébergée
 export DATAHUB_TOKEN=                          # token DataHub Platform (facultatif)
 .venv/bin/python catalog/ingest_datahub.py     # ingère datasets + lineage depuis fixtures/graph.json
 .venv/bin/python catalog/ingest_datahub.py --dry-run   # affiche les payloads sans appel réseau
+.venv/bin/python catalog/ingest_skills.py      # enregistre Skills + agent (Agent Context Kit)
+.venv/bin/python catalog/ingest_skills.py --dry-run   # affiche les payloads sans appel réseau
 ```
 
 ## Serveur MCP (Model Context Protocol)
@@ -99,8 +101,9 @@ Le serveur GMS expose le même graphe de contexte via **MCP** (streamable HTTP) 
 `https://terroir-context-gms.onrender.com/mcp` — l'agent peut lire le contexte
 (fraîcheur, SLA, lineage) et **écrire** dans le graphe (runs, incidents) :
 
-- 8 outils : `list_datasets`, `get_dataset`, `get_lineage`, `freshness_summary`,
-  `emit_run`, `create_incident`, `resolve_incident`, `list_incidents`
+- 12 outils : `list_datasets`, `get_dataset`, `get_lineage`, `freshness_summary`,
+  `emit_run`, `create_incident`, `resolve_incident`, `list_incidents`,
+  `list_skills`, `get_skill`, `register_skill`, `agent_context`
 - Agent autonome : `python examples/mcp_agent_demo.py` (boucle supervision :
   source périmée → lineage aval → incident → run → résolution)
 - Brancher dans Claude Desktop / MCP Inspector :
@@ -115,6 +118,31 @@ Le serveur GMS expose le même graphe de contexte via **MCP** (streamable HTTP) 
   }
 }
 ```
+
+## DataHub Skills et Agent Context Kit
+
+Les agents ne devinent pas : leurs instructions et leur contexte viennent du
+graphe, catalogués comme entités DataHub.
+
+- **Skills** (`urn:li:agentSkill:<id>`, aspect `agentSkillInfo`) : 3 skills
+  opérationnels définis en git au format agentskills.io —
+  `catalog/skills/freshness_sla/SKILL.md` (surveillance fraîcheur/SLA),
+  `catalog/skills/recommandations/SKILL.md` (fiche modèle) et
+  `catalog/skills/codegen/SKILL.md` (génération de code metadata-aware) ;
+  `catalog/ingest_skills.py --dry-run` affiche les payloads,
+  `catalog/ingest_skills.py` les enregistre dans le GMS.
+- **Agent Context Kit** : l'agent lui-même est catalogué
+  (`urn:li:aiAgent:terroir-context-agents`, aspect `aiAgentInfo`) et l'outil MCP
+  `agent_context(datasets)` assemble en un seul objet le bundle de contexte
+  (skills + fraîcheur + lineage) à injecter dans le prompt d'un agent.
+- Interopérabilité vérifiée avec le SDK acryl-datahub ≥ 1.7
+  (`datahub.api.entities.agent.agent_skill.AgentSkill`, `Agent`, CLI
+  `datahub agent-skill register`) : les skills écrits via REST sont lus par le
+  SDK et inversement (tests dédiés).
+
+Contribution OSS au repo DataHub (bonus du hackathon) : voir
+`contrib/datahub/README.md` — un skill « Freshness & SLA Monitoring » prêt à
+soumettre au dossier `.agent-skills/` de datahub-project/datahub.
 
 Le serveur MCP partage l'état en mémoire du GMS : un incident créé par l'agent
 apparaît dans l'API OpenAPI (`/openapi/v3/entity/incident`) et inversement.

@@ -245,6 +245,90 @@ class DataHubClient:
             )
         return incidents
 
+    # ---------------------------------------------------------------- skills
+    # Entités AgentSkill (urn:li:agentSkill:<id>, aspect agentSkillInfo) et
+    # AIAgent (urn:li:aiAgent:<id>, aspect aiAgentInfo) — le contrat OpenAPI v3
+    # générique est identique à celui des datasets, aucun SDK spécifique requis.
+
+    def upsert_skill(
+        self,
+        skill_id: str,
+        name: str,
+        description: str | None = None,
+        instructions: str | None = None,
+        source_url: str | None = None,
+        source_path: str | None = None,
+    ) -> bool:
+        """Enregistre un AgentSkill dans le graphe (création ou mise à jour)."""
+        if not self.enabled:
+            return False
+        urn = skill_id if skill_id.startswith("urn:li:agentSkill:") else f"urn:li:agentSkill:{skill_id}"
+        info: dict[str, Any] = {"name": name}
+        if description is not None:
+            info["description"] = description
+        if instructions is not None:
+            info["instructions"] = instructions
+        if source_url or source_path:
+            info["sourceRepository"] = {"url": source_url or "", "path": source_path}
+        result = self._request("POST", "/openapi/v3/entity/agentSkill", {"urn": urn, "aspects": {"agentSkillInfo": info}})
+        return result is not None
+
+    def get_skill(self, skill_id: str) -> dict[str, Any] | None:
+        """Instructions et métadonnées d'un AgentSkill, ou None."""
+        if not self.enabled:
+            return None
+        urn = skill_id if skill_id.startswith("urn:li:agentSkill:") else f"urn:li:agentSkill:{skill_id}"
+        path = f"/openapi/v3/entity/agentSkill/{urllib.parse.quote(urn, safe='')}?aspects=agentSkillInfo"
+        result = self._request("GET", path)
+        if not result:
+            return None
+        results = result.get("results") or []
+        if not results:
+            return None
+        entity = results[0]
+        info = (entity.get("aspects") or {}).get("agentSkillInfo") or {}
+        return {
+            "urn": entity.get("urn") or urn,
+            "id": (entity.get("urn") or urn).removeprefix("urn:li:agentSkill:"),
+            "name": info.get("name"),
+            "description": info.get("description", ""),
+            "instructions": info.get("instructions", ""),
+            "sourceRepository": info.get("sourceRepository"),
+            "requiredTools": info.get("requiredTools") or [],
+        }
+
+    def list_skills(self) -> list[dict[str, Any]]:
+        """Tous les AgentSkill catalogués dans le graphe."""
+        if not self.enabled:
+            return []
+        urns = self.search_entities(query="*", entity_type="AGENTSKILL", count=200)
+        skills = []
+        for hit in urns:
+            skill = self.get_skill(hit["urn"])
+            if skill:
+                skills.append(skill)
+        return sorted(skills, key=lambda skill: skill.get("id") or "")
+
+    def upsert_agent(
+        self,
+        agent_id: str,
+        name: str,
+        description: str | None = None,
+        instructions: str | None = None,
+        framework: str | None = None,
+    ) -> bool:
+        """Enregistre un AIAgent (framework, instructions) dans le graphe."""
+        if not self.enabled:
+            return False
+        urn = agent_id if agent_id.startswith("urn:li:aiAgent:") else f"urn:li:aiAgent:{agent_id}"
+        info: dict[str, Any] = {"name": name}
+        if description is not None:
+            info["description"] = description
+        if instructions is not None:
+            info["instructions"] = instructions
+        result = self._request("POST", "/openapi/v3/entity/aiAgent", {"urn": urn, "aspects": {"aiAgentInfo": info}})
+        return result is not None
+
     # ------------------------------------------------------------ commodités
     def freshness_summary(self, dataset_urns: list[str]) -> dict[str, Any]:
         """Résume la fraîcheur locale vs le SLA annoncé, source par source."""

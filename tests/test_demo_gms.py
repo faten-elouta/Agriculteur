@@ -86,3 +86,70 @@ def test_freshness_summary(gms_url):
     assert summary["sources"][HYDRO]["status"] in ("ok", "stale")
     assert summary["sources"][RECO]["status"] in ("ok", "stale")
     assert summary["ok"] + summary["stale"] == 2
+
+
+def test_skills_rest_upsert_et_relecture(gms_url):
+    client = DataHubClient(gms_url=gms_url, token="")
+    assert client.upsert_skill(
+        "test_skill",
+        "Skill de test",
+        description="description",
+        instructions="instructions",
+        source_url="https://github.com/faten-elouta/Agriculteur",
+        source_path="catalog/skills/test/SKILL.md",
+    ) is True
+    skill = client.get_skill("test_skill")
+    assert skill["name"] == "Skill de test"
+    assert skill["sourceRepository"]["url"] == "https://github.com/faten-elouta/Agriculteur"
+    assert skill["sourceRepository"]["path"] == "catalog/skills/test/SKILL.md"
+    assert client.get_skill("inconnu") is None
+
+    skills = client.list_skills()
+    assert any(s["id"] == "test_skill" for s in skills)
+    assert [s["id"] for s in skills] == sorted(s["id"] for s in skills)
+
+    assert client.upsert_agent("test_agent", "Agent de test", description="d", instructions="i") is True
+
+
+def test_skills_legacy_ingest_proposal_sdk(gms_url):
+    """Payload exact du SDK acryl-datahub 1.7 (AgentSkill.emit) : POST /aspects?action=ingestProposal."""
+    import json
+
+    import requests
+
+    payload = {
+        "proposal": {
+            "entityType": "agentSkill",
+            "entityUrn": "urn:li:agentSkill:skill_legacy",
+            "changeType": "UPSERT",
+            "aspectName": "agentSkillInfo",
+            "aspect": {
+                "value": json.dumps(
+                    {
+                        "name": "Skill legacy",
+                        "description": "d",
+                        "instructions": "instructions",
+                        "sourceRepository": {"url": "https://github.com/faten-elouta/Agriculteur", "path": "catalog/skills/test/SKILL.md"},
+                    }
+                ),
+                "contentType": "application/json",
+            },
+        }
+    }
+    response = requests.post(f"{gms_url}/aspects?action=ingestProposal", json=payload, timeout=10)
+    assert response.status_code == 200
+
+    client = DataHubClient(gms_url=gms_url, token="")
+    assert client.get_skill("skill_legacy")["name"] == "Skill legacy"
+
+    status_payload = {
+        "proposal": {
+            "entityType": "agentSkill",
+            "entityUrn": "urn:li:agentSkill:skill_legacy",
+            "changeType": "UPSERT",
+            "aspectName": "status",
+            "aspect": {"value": json.dumps({"removed": False}), "contentType": "application/json"},
+        }
+    }
+    response = requests.post(f"{gms_url}/aspects?action=ingestProposal", json=status_payload, timeout=10)
+    assert response.status_code == 200

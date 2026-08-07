@@ -68,11 +68,28 @@ jobs:
           print(f"SDK OK : {len(urns)} datasets, aspects lus pour {len(props)}")
           EOF
 
+      - name: Vérifie les Skills et l'agent (Agent Context Kit) via l'API GMS
+        run: |
+          skills=$(curl -sf "http://127.0.0.1:8000/openapi/v3/entity/agentSkill/urn:li:agentSkill:freshness_sla" | python3 -c "import json,sys; r=json.load(sys.stdin)['results'][0]; print(r['aspects']['agentSkillInfo']['name'])")
+          test "$skills" = "Surveillance de la fraîcheur des sources" || { echo "skill manquant : $skills"; exit 1; }
+          DATAHUB_GMS_URL=http://127.0.0.1:8000 python3 - <<'EOF'
+          from services.datahub_client import DataHubClient
+          client = DataHubClient()
+          assert len(client.list_skills()) == 3, "attendu 3 skills seedés"
+          urn = client.upsert_agent("ci_agent", "Agent CI", description="d")
+          assert urn is True
+          print(f"SKILLS OK : {[s['id'] for s in client.list_skills()]}")
+          EOF
+
+      - name: Vérifie l'ingestion skills (dry-run, payloads conformes)
+        run: python3 catalog/ingest_skills.py --dry-run | tail -2
+
       # Rejoue la démo agent réelle du dépôt contre le serveur qu'on vient de démarrer :
       # même code que celui documenté dans le README et examples/README.md, pas un
-      # test ad hoc. Couvre les 8 outils MCP (list/get/lineage/freshness/emit_run/
-      # incident create+resolve/list) en conditions réelles de protocole streamable HTTP
-      # et avec le backend réel (lecture/écriture via DataHubClient).
+      # test ad hoc. Couvre les 12 outils MCP (list/get/lineage/freshness/emit_run/
+      # incident create+resolve/list + skills/context Agent Context Kit) en conditions
+      # réelles de protocole streamable HTTP et avec le backend réel (lecture/écriture
+      # via DataHubClient).
       - name: Boucle de supervision réelle via MCP (examples/mcp_agent_demo.py)
         run: MCP_URL=http://127.0.0.1:8000/mcp python3 examples/mcp_agent_demo.py
 

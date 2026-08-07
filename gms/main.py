@@ -13,6 +13,8 @@ Endpoints (contrat identique à DataHub GMS) :
 - POST /openapi/v3/entity/mlModel
 - POST /openapi/v3/entity/incident
 - POST /openapi/v3/entity/incident/{urn}
+- GET/POST /openapi/v3/entity/agentSkill (Skills DataHub)
+- GET/POST /openapi/v3/entity/aiAgent   (Agent Context Kit)
 
 En plus, le même graphe est exposé en Model Context Protocol (MCP) à /mcp :
 https://terroir-context-gms.onrender.com/mcp (voir gms/mcp_server.py).
@@ -46,10 +48,37 @@ _STORE: dict[str, dict[str, Any]] = {}
 _RELATIONSHIPS: dict[str, list[dict[str, str]]] = {}
 _INCIDENTS: dict[str, dict[str, Any]] = {}
 _INCIDENT_COUNTER = 0
+_SKILLS: dict[str, dict[str, Any]] = {}
+_AGENTS: dict[str, dict[str, Any]] = {}
+
+_DEMO_SKILLS: list[dict[str, Any]] = [
+    {
+        "urn": "urn:li:agentSkill:freshness_sla",
+        "name": "Surveillance de la fraîcheur des sources",
+        "description": "Règles de surveillance de la fraîcheur des sources (SLA vs dernière mise à jour) et gestion des incidents.",
+        "instructions": "Procédure : (1) appeler freshness_summary, (2) pour chaque source stale lire le lineage aval, (3) créer un incident OPERATIONAL sur le premier asset aval impacté, (4) tracer le run via emit_run. Ne jamais supposer une date de mise à jour : lire last_updated dans le graphe.",
+        "sourceRepository": {"url": "https://github.com/faten-elouta/Agriculteur", "path": "catalog/skills/freshness_sla/SKILL.md"},
+    },
+    {
+        "urn": "urn:li:agentSkill:recommandations",
+        "name": "Modèle recommandations_parcelle",
+        "description": "Fiche modèle du modèle de recommandation de culture : provenance (lineage amont) et règles d'explication.",
+        "instructions": "Pour expliquer une recommandation : lire le lineage du modèle via get_lineage, vérifier la fraîcheur des sources amont via freshness_summary, citer la provenance. Les valeurs climatiques futures et économiques sont modélisées : toujours le signaler.",
+        "sourceRepository": {"url": "https://github.com/faten-elouta/Agriculteur", "path": "catalog/skills/recommandations/SKILL.md"},
+    },
+    {
+        "urn": "urn:li:agentSkill:codegen",
+        "name": "Génération de code metadata-aware",
+        "description": "Workflow de génération de recettes d'ingestion, SQL et DAG Airflow à partir des schémas, du lineage et des propriétés réels lus dans DataHub.",
+        "instructions": "Découvrir les datasets via la recherche, lire les schémas réels (schemaMetadata), lire le lineage (upstreamLineage) pour les dépendances, reporter les propriétés réelles dans la recette (transformers). Jamais de champ inventé : si le schéma est vide, produire un artefact honnête.",
+        "sourceRepository": {"url": "https://github.com/faten-elouta/Agriculteur", "path": "catalog/skills/codegen/SKILL.md"},
+    },
+]
 
 
 def short_name(urn: str) -> str:
-    return urn.split(",")[1]
+    parts = urn.split(",")
+    return parts[1] if len(parts) > 1 else urn.split(":")[-1]
 
 
 def _load_graph() -> dict[str, Any]:
@@ -63,6 +92,8 @@ def _seed() -> None:
     _STORE.clear()
     _RELATIONSHIPS.clear()
     _INCIDENTS.clear()
+    _SKILLS.clear()
+    _AGENTS.clear()
     for urn, props in graph.get("datasets", {}).items():
         custom = {
             "niveau_de_preuve": str(props.get("niveau_de_preuve", "")),
@@ -77,6 +108,8 @@ def _seed() -> None:
             "description": "Source de contexte Terroir Context Agents — licence et SLA déclarés par l'ingestion.",
             "customProperties": custom,
         }
+    for skill in _DEMO_SKILLS:
+        _SKILLS[skill["urn"]] = skill
     lineage = graph.get("lineage", {})
     for urn in list(_STORE):
         upstreams = [k for k, targets in lineage.items() if urn in targets]
@@ -212,12 +245,22 @@ async def incident_get(urn: str) -> dict:
 
 def _match_urns(entity_types: list[str] | None, query: str) -> list[str]:
     types = {t.upper() for t in (entity_types or ["DATASET"])}
+    if types & {"AGENTSKILL", "AGENT_SKILL"}:
+        urns = [urn for urn in _SKILLS if urn.startswith("urn:li:agentSkill:")]
+        return _filter_by_query(urns, query)
+    if types & {"AI_AGENT"}:
+        urns = [urn for urn in _AGENTS if urn.startswith("urn:li:aiAgent:")]
+        return _filter_by_query(urns, query)
     if types and not types & {"DATASET", "DATASET_PLATFORM"}:
         return []
     urns = [urn for urn in _STORE if urn.startswith("urn:li:dataset:")]
+    return _filter_by_query(urns, query)
+
+
+def _filter_by_query(urns: list[str], query: str) -> list[str]:
     if query and query != "*":
         lowered = query.lower()
-        urns = [urn for urn in urns if lowered in short_name(urn).lower()]
+        return [urn for urn in urns if lowered in short_name(urn).lower()]
     return urns
 
 
@@ -282,6 +325,85 @@ async def incident_list() -> dict:
             for urn, incident in _INCIDENTS.items()
         ]
     }
+
+
+# ---------------------------------------------------------------------------
+# Entités AgentSkill et AIAgent (contrat OpenAPI v3, mêmes formes que les
+# datasets) : la chaîne réelle du serveur MCP (DataHubClient REST) et le SDK
+# acryl-datahub >= 1.7 peuvent lire/écrire ces entités sur ce graphe.
+# ---------------------------------------------------------------------------
+
+def _skill_get(urn: str) -> dict:
+    skill = _SKILLS.get(urn)
+    if skill is None:
+        return {"results": []}
+    return {"results": [{"urn": urn, "aspects": {"agentSkillInfo": {k: v for k, v in skill.items() if k != "urn"}}}]}
+
+
+@app.get("/openapi/v3/entity/agentSkill/{urn}")
+async def agent_skill_get(urn: str) -> dict:
+    return _skill_get(urn)
+
+
+@app.get("/openapi/v3/entity/aiAgent/{urn}")
+async def ai_agent_get(urn: str) -> dict:
+    agent = _AGENTS.get(urn)
+    if agent is None:
+        return {"results": []}
+    return {"results": [{"urn": urn, "aspects": {"aiAgentInfo": {k: v for k, v in agent.items() if k != "urn"}}}]}
+
+
+@app.post("/openapi/v3/entity/agentSkill")
+async def agent_skill_upsert(request: Request) -> dict:
+    body = await request.json()
+    urn = body.get("urn", "")
+    info = body.get("aspects", {}).get("agentSkillInfo", {})
+    if not urn:
+        return JSONResponse(status_code=400, content={"error": "urn requis"})
+    skill = dict(info)
+    skill["name"] = info.get("name", short_name(urn))
+    _SKILLS[urn] = {"urn": urn, **skill}
+    return JSONResponse(status_code=201, content={"results": [{"urn": urn}]})
+
+
+@app.post("/openapi/v3/entity/aiAgent")
+async def ai_agent_upsert(request: Request) -> dict:
+    body = await request.json()
+    urn = body.get("urn", "")
+    info = body.get("aspects", {}).get("aiAgentInfo", {})
+    if not urn:
+        return JSONResponse(status_code=400, content={"error": "urn requis"})
+    agent = dict(info)
+    agent["name"] = info.get("name", short_name(urn))
+    _AGENTS[urn] = {"urn": urn, **agent}
+    return JSONResponse(status_code=201, content={"results": [{"urn": urn}]})
+
+
+@app.post("/aspects")
+async def aspects_legacy(request: Request) -> dict:
+    """Endpoint legacy du GMS (ingestProposal) : utilisé par le SDK acryl-datahub
+    (AgentSkill.emit / Agent.emit, CLI `datahub agent-skill register`)."""
+    action = request.query_params.get("action")
+    if action != "ingestProposal":
+        return JSONResponse(status_code=404, content={"detail": "Not Found"})
+    body = await request.json()
+    body = body.get("proposal") or body  # le SDK enveloppe dans {"proposal": {...}}
+    entity_type = body.get("entityType", "")
+    urn = body.get("entityUrn", "")
+    aspect_name = body.get("aspectName", "")
+    try:
+        aspect = json.loads((body.get("aspect") or {}).get("value", "{}"))
+    except (ValueError, TypeError):
+        return JSONResponse(status_code=400, content={"error": "aspect invalide"})
+    if entity_type == "agentSkill" and urn.startswith("urn:li:agentSkill:") and aspect_name == "agentSkillInfo":
+        _SKILLS[urn] = {"urn": urn, **aspect}
+    elif entity_type == "aiAgent" and urn.startswith("urn:li:aiAgent:") and aspect_name == "aiAgentInfo":
+        _AGENTS[urn] = {"urn": urn, **aspect}
+    elif aspect_name == "status":
+        pass  # aspect statut (removed) : accepté sans stockage
+    else:
+        return JSONResponse(status_code=400, content={"error": f"entité/aspect non supporté : {entity_type}/{aspect_name}"})
+    return {"value": "0"}
 
 
 if _MCP_HTTP is not None:

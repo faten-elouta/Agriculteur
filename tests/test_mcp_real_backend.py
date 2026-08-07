@@ -102,3 +102,47 @@ def test_mode_demo_sans_gms_configure(monkeypatch):
     datasets = backend.list_datasets()
     assert len(datasets) == 11
     assert any(d["name"] == "hubeau_hydrometrie" for d in datasets)
+
+
+def test_mode_reel_skills_et_contexte(monkeypatch, gms_url):
+    """Chaîne réelle complète : Skills (AgentSkill) + AIAgent via REST + SDK."""
+    backend = _real(monkeypatch, gms_url)
+
+    skills = backend.list_skills()
+    assert [s["id"] for s in skills] == ["codegen", "freshness_sla", "recommandations"]
+    freshness = backend.get_skill("freshness_sla")
+    assert "freshness_summary" in freshness["instructions"]
+    assert freshness["sourceRepository"]["path"] == "catalog/skills/freshness_sla/SKILL.md"
+
+    created = backend.register_skill(
+        "test_skill", "Skill de test", "description", "instructions",
+        source_url="https://github.com/faten-elouta/Agriculteur", source_path="catalog/skills/test/SKILL.md",
+    )
+    assert created["ok"] is True
+    assert backend.get_skill("test_skill")["name"] == "Skill de test"
+
+    ctx = backend.agent_context(["sol_rrp", "hubeau_hydrometrie"])
+    assert ctx["agent"]["urn"] == "urn:li:aiAgent:terroir-context-agents"
+    assert len(ctx["skills"]) == 4
+    assert set(ctx["lineage"]) == {"sol_rrp", "hubeau_hydrometrie"}
+    assert ctx["lineage"]["sol_rrp"]["downstream"] == ["features_bilan_hydrique"]
+    assert ctx["freshness"]["sources"]["sol_rrp"]["urn"].startswith("urn:li:dataset:")
+
+
+def test_mode_reel_register_skill_puis_lecture_sdk(monkeypatch, gms_url):
+    """Un skill écrit via le client REST est relisible via le SDK (recherche GraphQL)."""
+    backend = _real(monkeypatch, gms_url)
+    backend.register_skill("skill_sdk", "Skill SDK", "d", "i")
+    urns = backend.client.search_entities(query="*", entity_type="AGENTSKILL", count=200)
+    assert any(urn["urn"] == "urn:li:agentSkill:skill_sdk" for urn in urns)
+
+
+def test_mode_demo_skills_et_contexte(monkeypatch):
+    monkeypatch.delenv("DATAHUB_GMS_URL", raising=False)
+    gms_main._seed()  # état démo propre (les tests réels mutent le store partagé)
+    backend = mcp_server._backend()
+    assert [s["id"] for s in backend.list_skills()] == ["codegen", "freshness_sla", "recommandations"]
+    ctx = backend.agent_context(["sol_rrp"])
+    assert len(ctx["skills"]) == 3
+    assert ctx["lineage"]["sol_rrp"]["downstream"] == ["features_bilan_hydrique"]
+    assert backend.register_skill("demo_skill", "Demo", "d", "i")["ok"] is True
