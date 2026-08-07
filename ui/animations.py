@@ -28,6 +28,8 @@ SCROLL_ANIMATION_SCRIPT = """
     var els;
     els = doc.querySelectorAll('.animate-fade-up:not(.is-visible)');
     els.forEach(function(el) { fadeObserver.observe(el); });
+    els = doc.querySelectorAll('.lineage:not(.is-visible)');
+    els.forEach(function(el) { fadeObserver.observe(el); });
     els = doc.querySelectorAll('.animate-stagger:not(.is-visible)');
     els.forEach(function(el) { staggerObserver.observe(el); });
     els = doc.querySelectorAll('.animate-count-up:not(.counting):not([data-done])');
@@ -109,7 +111,7 @@ SCROLL_ANIMATION_SCRIPT = """
 
   // Filet de sécurité : rien ne doit rester invisible si un observateur échoue.
   window.parent.setTimeout(function() {
-    doc.querySelectorAll('.animate-fade-up, .animate-stagger').forEach(function(el) {
+    doc.querySelectorAll('.animate-fade-up, .animate-stagger, .lineage').forEach(function(el) {
       el.classList.add('is-visible');
     });
     doc.querySelectorAll('.animate-count-up:not(.counting)').forEach(function(el) {
@@ -129,9 +131,9 @@ SCROLL_ANIMATION_SCRIPT = """
       mutation.addedNodes.forEach(function(node) {
         if (node.nodeType === 1) {
           if (node.matches && node.matches(
-              '.animate-fade-up, .animate-stagger, .animate-count-up, .page-transition-enter, .parallax-image') ||
+              '.animate-fade-up, .animate-stagger, .lineage, .animate-count-up, .page-transition-enter, .parallax-image') ||
               (node.querySelector && node.querySelector(
-              '.animate-fade-up, .animate-stagger, .animate-count-up, .page-transition-enter, .parallax-image'))) {
+              '.animate-fade-up, .animate-stagger, .lineage, .animate-count-up, .page-transition-enter, .parallax-image'))) {
             hit = true;
           }
         }

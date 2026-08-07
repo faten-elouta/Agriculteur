@@ -201,7 +201,35 @@ Le bouton de l'interface force l'obsolescence de `hubeau_hydrometrie`, appelle l
 même classe `Sentinelle` que le mode DataHub, parcourt les descendants, invalide les
 recommandations visibles et écrit `reports/impact_…_station.json`. Le nombre affiché
 est dérivé des recommandations présentes et de la présence réelle de l'asset final
-dans le lineage.
+dans le lineage. La cascade d'impact est jouée en cinématique (nœuds qui passent au
+rouge en séquence) avec compteur d'entités invalidées.
+
+## Visuels de la décision (hackathon)
+
+Six mises en scène complètent le tunnel, toutes alimentées par les données déjà
+calculées (aucune source externe ajoutée) :
+
+- **Graphe de lineage interactif** — DAG SVG des 8 sources jusqu'aux
+  recommandations ; chaque nœud est coloré par sa fraîcheur réelle (SLA vs
+  dernière mise à jour), une fiche `<details>` par entité (SLA, licence, niveau
+  de preuve) et les arêtes « coulent » au défilement.
+- **Console de supervision live** — bouton « Rejouer la supervision de l'agent » :
+  la boucle complète (skills → fraîcheur → propagation du lineage → incident →
+  run → résolution) se rejoue pas à pas ; en mode réel les écritures partent
+  vraiment vers le graphe, sinon en simulation locale.
+- **Carte parcellaire** — parcelles RPG réelles (géométries WGS84) reprojetées en
+  SVG avec les stations Hub'Eau ; parcelle sélectionnée mise en évidence, fiches
+  au clic.
+- **Lame d'eau mensuelle** — graphique SVG des besoins d'irrigation par culture,
+  barres qui poussent au défilement, fenêtre de tension hydrique signalée.
+- **Cascade de panne cinématique** — propagation séquentielle de l'impact.
+- **Mode démo auto** — bouton « ▶ Démo auto (vidéo) » qui enchaîne seul les six
+  écrans du parcours (parcelle → résultat → météo → levers → provenance →
+  détails techniques) avec une parcelle de démonstration hors réseau : idéal
+  pour filmer la soumission Devpost.
+
+Tous les modules vivent dans `ui/` (`lineage_graph.py`, `supervision_console.py`,
+`parcel_map.py`, `water_chart.py`) et sont couverts par des tests.
 
 ## Limites, licences et sources
 

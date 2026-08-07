@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import tempfile
-from datetime import date
+import time
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -14,7 +15,12 @@ from services.datahub_client import DataHubClient
 from services.provenance_service import load_graph, short_name
 from services.data_quality_service import build_quality_certificate
 from services.expert_report_service import build_expert_report
-from services.real_data_service import PublicDataError, fetch_real_territory, resolve_soil
+from services.real_data_service import (
+    PublicDataError,
+    RealTerritory,
+    fetch_real_territory,
+    resolve_soil,
+)
 from services.recommendation_service import build_recommendation, recompute_margin
 from services.report_service import build_comparison_report, report_to_csv, save_report
 from services.simulation_service import simulate_station_failure
@@ -31,9 +37,13 @@ from ui.assolement import (
     tunnel_header_html,
 )
 from ui.calendar_svg import calendar_svg
+from ui.lineage_graph import lineage_html
+from ui.parcel_map import render_parcel_map
 from ui.provenance_spine import render_spine
 from ui.scenario_timeline import render_crop_scenario
 from ui.step_nav import render_step_indicator
+from ui.supervision_console import render_supervision_console
+from ui.water_chart import render_water_chart
 from ui.styles import CSS
 from ui.weather_scene import compute_header_state, render_header_scene, render_grass_band
 from ui import animations as anim
@@ -43,6 +53,94 @@ STEP_LABELS = ["Parcelle & résultat", "Scénario météo", "Détails techniques
 ASSOLEMENT_SCREEN_COUNT = 4
 HYDRO_URN = "urn:li:dataset:(urn:li:dataPlatform:duckdb,hubeau_hydrometrie,PROD)"
 RECO_URN = "urn:li:dataset:(urn:li:dataPlatform:duckdb,recommandations_parcelle,PROD)"
+
+# Mode démo auto : séquence des écrans rejoués pour la vidéo de soumission.
+DEMO_SEQUENCE = [
+    ("assolement_screen", 1),
+    ("assolement_screen", 2),
+    ("assolement_screen", 3),
+    ("assolement_screen", 4),
+    ("step", 2),
+    ("step", 3),
+]
+DEMO_STEP_SECONDS = 3.2
+
+
+def _demo_parcel() -> dict:
+    """Parcelle de démonstration autonome (géométrie locale, aucune API externe)."""
+    return {
+        "id": "RPG-2025-DEMO",
+        "label": "La Mare au Loup — démonstration",
+        "commune": "Vierzon",
+        "surface_ha": 12.5,
+        "sol": "limono-argileux",
+        "reserve_utile_mm": 92,
+        "culture_actuelle": "blé tendre",
+        "source": "parcelle de démonstration (hors réseau)",
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [[[2.05, 47.22], [2.062, 47.22], [2.062, 47.212], [2.05, 47.212], [2.05, 47.22]]],
+        },
+    }
+
+
+def _demo_territory() -> RealTerritory:
+    """Territoire de démo : 1 parcelle + 2 stations fictives, sans réseau."""
+    return RealTerritory(
+        commune={"code": "18279", "nom": "Vierzon", "centre": {"type": "Point", "coordinates": [2.05, 47.22]}},
+        parcels=[_demo_parcel()],
+        hydro_stations=[
+            {"code_station": "K5210010", "libelle_station": "Cher à Vierzon", "longitude": 2.0506, "latitude": 47.2212, "source_type": "hydrometrie"},
+            {"code_station": "BSS004QVEA", "libelle_station": "Puits de démonstration", "longitude": 2.0565, "latitude": 47.2155, "source_type": "piezometrie"},
+        ],
+        fetched_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        rpg_year=2025,
+        resolution_log=[{"field": "commune", "source": "territoire de démonstration", "status": "utilisée"}],
+    )
+
+
+def _start_demo(graph: dict, culture_specs: list[dict]) -> None:
+    """Prépare la démo : territoire par défaut, résultat calculé, séquence lancée."""
+    if "real_territory" not in st.session_state:
+        st.session_state.real_territory = _demo_territory()
+    if "result" not in st.session_state:
+        result = build_recommendation(
+            graph, _demo_parcel(), culture_specs, date(2027, 4, 15), 3, date(2026, 7, 30)
+        )
+        result["mode_donnees"] = "demo"
+        result["parcelle_source"] = "parcelle de démonstration (hors réseau)"
+        result["resolution_log"] = st.session_state.real_territory.resolution_log
+        st.session_state.result = result
+    st.session_state.impacted = []
+    st.session_state.demo = {"idx": 0}
+    st.session_state.step = 1
+    st.session_state.assolement_screen = 1
+
+
+def _apply_demo_position() -> None:
+    """Applique la position courante de la séquence démo (avant le rendu)."""
+    demo = st.session_state.get("demo")
+    if not demo:
+        return
+    kind, value = DEMO_SEQUENCE[demo["idx"]]
+    if kind == "assolement_screen":
+        st.session_state.step = 1
+        st.session_state.assolement_screen = value
+    else:
+        st.session_state.step = value
+
+
+def _advance_demo() -> None:
+    """Pause, puis écran suivant de la séquence (dernier écran : arrêt)."""
+    demo = st.session_state.get("demo")
+    if not demo:
+        return
+    time.sleep(DEMO_STEP_SECONDS)
+    demo["idx"] += 1
+    if demo["idx"] >= len(DEMO_SEQUENCE):
+        st.session_state.pop("demo", None)
+    else:
+        st.rerun()
 
 
 @st.cache_resource
@@ -255,6 +353,14 @@ def render_question_screen(graph: dict, culture_specs: list[dict]) -> None:
 
     parcel_line_facts = f'<span>{parcel["commune"]}</span><span>{parcel["surface_ha"]} ha</span><span>{parcel["sol"]}</span><span>RU {parcel["reserve_utile_mm"]} mm</span>'
     st.markdown(anim.fade_up(f'<div class="parcel-line">{parcel_line_facts}</div>', delay=1), unsafe_allow_html=True)
+    st.session_state.parcelle_id = parcel.get("id", selected_label)
+    st.markdown(
+        anim.fade_up(
+            f'<div class="parcel-map">{render_parcel_map(territory.parcels, territory.hydro_stations, selected_id=st.session_state.parcelle_id)}</div>',
+            delay=2,
+        ),
+        unsafe_allow_html=True,
+    )
     calculate = st.button("Comparer les cultures pour cette parcelle", type="primary", width="stretch")
     if calculate:
         result = build_recommendation(graph, parcel, culture_specs, sowing, horizon, date(2026, 7, 30))
@@ -455,9 +561,19 @@ def render_provenance_screen(result: dict, graph: dict) -> None:
         unsafe_allow_html=True,
     )
     st.markdown(datahub_banner_html(graph), unsafe_allow_html=True)
+    render_supervision_console(get_datahub_client(), graph)
     st.markdown('<div class="assolement-spine-full">', unsafe_allow_html=True)
     st.markdown(render_spine(graph, set(st.session_state.get("impacted", []))), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+
+    impacted = set(st.session_state.get("impacted", []))
+    st.markdown(
+        anim.fade_up(
+            '<div class="report-subhead">Le graphe de lineage — chaque chiffre a un chemin</div>'
+        ),
+        unsafe_allow_html=True,
+    )
+    st.markdown(lineage_html(graph, impacted_urns=impacted), unsafe_allow_html=True)
 
     st.markdown('<div class="report-subhead">Détails techniques et vue experte</div>', unsafe_allow_html=True)
     with st.expander("Voir tous les chiffres et la confiance", expanded=False):
@@ -509,6 +625,17 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+demo_col, stop_col = st.columns([6, 2])
+with demo_col:
+    if st.button("▶ Démo auto (vidéo)", key="demo_start", width="stretch"):
+        _start_demo(graph, culture_specs)
+        st.rerun()
+with stop_col:
+    if st.session_state.get("demo"):
+        if st.button("■ Arrêter", key="demo_stop", width="stretch"):
+            st.session_state.pop("demo", None)
+            st.rerun()
+
 if "step" not in st.session_state:
     st.session_state.step = 1
 if st.session_state.step > 1 and "result" not in st.session_state:
@@ -518,6 +645,7 @@ if "assolement_screen" not in st.session_state:
     st.session_state.assolement_screen = 1
 if "result" not in st.session_state and st.session_state.assolement_screen > 1:
     st.session_state.assolement_screen = 1
+_apply_demo_position()
 
 if step > 1:
     st.markdown(anim.fade_up(render_step_indicator(step, STEP_LABELS)), unsafe_allow_html=True)
@@ -557,6 +685,9 @@ elif step == 2:
     tension_months = {m["mois"] for m in result["fenetre_de_tension"]}
     for index, crop in enumerate(result["cultures"]):
         st.markdown(anim.fade_up(render_crop_scenario(crop, tension_months, play_token), delay=index % 4), unsafe_allow_html=True)
+
+    st.markdown(anim.fade_up(render_water_chart(result["cultures"], result["fenetre_de_tension"])), unsafe_allow_html=True)
+    st.caption("Besoins d'irrigation répartis sur le cycle de chaque culture, avec la fenêtre de tension hydrique (mêmes données que les frises ci-dessus).")
 
     with st.expander("Voir le calendrier détaillé"):
         svg, alternative = calendar_svg(result)
@@ -633,15 +764,21 @@ elif step == 3:
             st.caption(f"Incident ouvert dans le graphe DataHub : {st.session_state['incident_urn']}")
         impacted_names = [urn.split(",")[1] if "," in urn else urn for urn in simulation.get("impacted", [])]
         flow_items = [
-            '<span><b>1</b> hubeau_hydrometrie<br><small>station simulée hors délai</small></span>',
-            "<i>→</i>",
-            '<span><b>2</b> features_bilan_hydrique<br><small>calcul d’eau invalidé</small></span>',
-            "<i>→</i>",
-            '<span><b>3</b> scenarios_cultures<br><small>scénarios invalidés</small></span>',
-            "<i>→</i>",
-            '<span><b>4</b> recommandations<br><small>résultats barrés</small></span>',
+            '<span class="cascade-node" style="--fc-i:0;"><b>1</b> hubeau_hydrometrie<br><small>station simulée hors délai</small></span>',
+            '<i class="cascade-arrow" style="--fc-i:1;">→</i>',
+            '<span class="cascade-node" style="--fc-i:2;"><b>2</b> features_bilan_hydrique<br><small>calcul d’eau invalidé</small></span>',
+            '<i class="cascade-arrow" style="--fc-i:3;">→</i>',
+            '<span class="cascade-node" style="--fc-i:4;"><b>3</b> scenarios_cultures<br><small>scénarios invalidés</small></span>',
+            '<i class="cascade-arrow" style="--fc-i:5;">→</i>',
+            '<span class="cascade-node" style="--fc-i:6;"><b>4</b> recommandations<br><small>résultats barrés</small></span>',
         ]
-        st.markdown(f'<div class="failure-flow animate-stagger">{"".join(flow_items)}</div>', unsafe_allow_html=True)
+        cascade_total = 4
+        st.markdown(
+            f'<div class="failure-cascade">'
+            f'<div class="cascade-impact">impact linéaire : <b class="animate-count-up" data-target="{cascade_total}">0</b> entités invalidées</div>'
+            f'<div class="failure-flow">{"".join(flow_items)}</div></div>',
+            unsafe_allow_html=True,
+        )
         st.write("**Éléments touchés :** " + ", ".join(impacted_names))
         if simulation.get("report_path"):
             st.code(simulation["report_path"], language=None)
@@ -651,3 +788,5 @@ elif step == 3:
     st.markdown('<div class="final-warning"><strong>Avant de décider</strong><p>Confirmez l’analyse de sol, vos prix, vos charges, votre accès à l’eau et la place de la culture dans votre rotation avec votre conseiller.</p>' + anim.arrow_slide("Voir le projet, les sources et les limites", href="https://github.com/faten-elouta/Agriculteur#readme") + '</div>', unsafe_allow_html=True)
 
     step_nav(prev_step=2, prev_label="← Retour au scénario météo")
+
+_advance_demo()

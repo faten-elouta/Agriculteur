@@ -63,6 +63,29 @@ code, pre, time, .mono, [data-testid="stMetricValue"], td { font-family:"IBM Ple
 .expert-heading { display:flex; align-items:center; gap:1.5rem; border:1px solid var(--craie); border-left:4px solid var(--eau); border-radius:var(--radius); background:var(--card); box-shadow:var(--shadow); padding:.6rem .8rem; margin:.3rem 0 .6rem; }.expert-heading span { display:block; font-size:11px; letter-spacing:.08em; }.expert-heading strong { font:500 22px ui-monospace,monospace; }.expert-heading p { max-width:620px; margin:0; }
 .expert-divider { border-top:2px solid var(--eau); margin:.8rem 0 .5rem; padding-top:.4rem; }.expert-divider > span { font-size:12px; letter-spacing:.1em; color:var(--eau); }.expert-divider h2 { margin:.1rem 0; }.expert-divider p { margin:.1rem 0; }
 .failure-flow { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin:.5rem 0; }.failure-flow span { border:1px solid var(--craie); border-left:4px solid var(--rupture); border-radius:var(--radius-sm); background:var(--card); box-shadow:var(--shadow); padding:.5rem .65rem; }.failure-flow b { font-family:ui-monospace,monospace; }.failure-flow small { font-size:11px; }
+/* Cascade de panne cinématique — propagation séquentielle le long du lineage */
+.failure-cascade { margin:.4rem 0; }
+.cascade-impact {
+  display: flex;
+  align-items: baseline;
+  gap: .35rem;
+  font-size: 12.5px;
+  letter-spacing: .04em;
+  color: var(--rupture);
+  font-weight: 600;
+  margin-bottom: .35rem;
+}
+.cascade-impact b { font: 600 20px ui-monospace, monospace; }
+.cascade-node,
+.cascade-arrow {
+  opacity: 0;
+  animation: cascadeIn 520ms var(--anim-ease-out) calc(var(--fc-i) * 560ms) forwards;
+}
+@keyframes cascadeIn {
+  0%   { opacity: 0; transform: translateX(-14px) scale(.92); }
+  25%  { opacity: 1; transform: none; box-shadow: 0 0 0 5px rgb(220 38 38 / .22); }
+  100% { opacity: 1; transform: none; box-shadow: var(--shadow); }
+}
 .trust-banner { display:flex; align-items:center; justify-content:space-between; gap:1rem; border:1px solid var(--craie); border-left:5px solid var(--sur); border-radius:var(--radius); background:var(--card); box-shadow:var(--shadow); padding:.6rem .9rem; margin:.3rem 0 .6rem; }.trust-banner span { display:block; font-size:12px; letter-spacing:.08em; }.trust-banner strong { font:600 16px "IBM Plex Serif",Georgia,serif; }.trust-banner p { margin:.2rem 0 0; }.trust-seal { min-width:80px; text-align:center; color:var(--sur); font:600 22px ui-monospace,monospace; }.trust-seal small { display:block; font:11px system-ui; }
 .quality-list { display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem; }.quality-list > div { border:1px solid var(--craie); border-left:4px solid; border-radius:var(--radius-sm); background:var(--card); box-shadow:var(--shadow); padding:.6rem .8rem; }.quality-list span,.quality-list b,.quality-list small { display:block; }.quality-list b { font-size:13px; }.quality-elevee{border-color:var(--sur)}.quality-moyenne{border-color:var(--vigilance)}.quality-faible,.quality-insuffisante{border-color:var(--rupture)}
 .confidence-title { border:1px solid var(--craie); border-left:4px solid var(--eau); border-radius:var(--radius); background:var(--card); box-shadow:var(--shadow); padding:.7rem 1rem; margin:.4rem 0 .8rem; }.confidence-title > span { display:block; font-size:12px; letter-spacing:.08em; }.confidence-title > strong { display:block; font:600 22px "IBM Plex Serif",Georgia,serif; }.confidence-title p { margin:.2rem 0; }
@@ -468,6 +491,335 @@ button[kind="primary"] p, [data-testid="stBaseButton-primary"] p { color:var(--p
               transform var(--anim-duration-fast) var(--anim-ease);
 }
 
+/* Graphe de lineage — DAG animé des sources vers la décision */
+.lineage {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 600ms var(--anim-ease-out),
+              transform 600ms var(--anim-ease-out);
+}
+.lineage.is-visible {
+  opacity: 1;
+  transform: none;
+}
+.lineage-stage {
+  position: relative;
+  aspect-ratio: var(--lg-ratio, 5 / 3);
+  margin: .3rem 0;
+}
+.lineage-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.lineage-edge {
+  fill: none;
+  stroke: var(--craie);
+  stroke-width: 2;
+  stroke-dasharray: 7 7;
+  animation: lineageFlow 1.6s linear infinite;
+}
+.lineage-edge:nth-of-type(2n) { animation-delay: .4s; }
+.lineage-edge:nth-of-type(3n) { animation-delay: .8s; }
+@keyframes lineageFlow {
+  to { stroke-dashoffset: -14; }
+}
+.lineage-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  border: 1px solid var(--craie);
+  border-left: 4px solid var(--craie);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: .4rem .55rem;
+  text-decoration: none;
+  color: var(--encre);
+  opacity: 0;
+  transform: translateY(14px) scale(.96);
+  transition: opacity 450ms var(--anim-ease-out),
+              transform 450ms var(--anim-ease-out),
+              box-shadow 300ms var(--anim-ease);
+  transition-delay: calc(var(--lg-i) * 90ms);
+  z-index: 1;
+}
+.lineage.is-visible .lineage-node {
+  opacity: 1;
+  transform: none;
+}
+.lineage-node:hover {
+  box-shadow: var(--shadow-lift, 0 8px 24px rgb(0 0 0 / .16));
+  z-index: 2;
+}
+.lineage-node.ok { border-left-color: var(--sur); }
+.lineage-node.stale { border-left-color: var(--rupture); }
+.lineage-node.unknown { border-left-color: var(--craie); }
+.lineage-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--craie);
+}
+.lineage-node.ok .lineage-dot { background: var(--sur); }
+.lineage-node.stale .lineage-dot { background: var(--rupture); }
+.lineage-node.pulse .lineage-dot {
+  animation: lineagePulse 1.6s ease-in-out infinite;
+}
+@keyframes lineagePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(220 38 38 / .45); }
+  50% { box-shadow: 0 0 0 7px rgb(220 38 38 / 0); }
+}
+.lineage-name {
+  font: 600 12.5px "IBM Plex Serif", Georgia, serif;
+  line-height: 1.2;
+}
+.lineage-proof {
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  color: var(--encre);
+  opacity: .75;
+}
+.lineage-legend {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--encre);
+  margin: .2rem 0 .5rem;
+}
+.lineage-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: .3rem;
+  background: var(--craie);
+}
+.lineage-legend.ok i { background: var(--sur); }
+.lineage-legend.stale i { background: var(--rupture); }
+.lineage-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: .5rem;
+  margin-top: .4rem;
+}
+.lineage-card {
+  border: 1px solid var(--craie);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: 0 .6rem;
+}
+.lineage-card summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  padding: .55rem 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.lineage-card summary::-webkit-details-marker { display: none; }
+.lineage-card summary::after {
+  content: "＋";
+  font-weight: 600;
+  color: var(--eau);
+  transition: transform 300ms var(--anim-ease);
+}
+.lineage-card[open] summary::after { transform: rotate(45deg); }
+.lineage-card-layer {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--encre);
+  opacity: .7;
+  white-space: nowrap;
+}
+.lineage-card dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .2rem .7rem;
+  margin: 0 0 .55rem;
+  font-size: 12px;
+}
+.lineage-card dt { opacity: .75; }
+.lineage-card dd { margin: 0; text-align: right; }
+.lineage-card a { scroll-margin-top: 90px; }
+
+/* Console de supervision live de l'agent */
+.supervision-console {
+  border: 1px solid var(--craie);
+  border-left: 4px solid var(--eau);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: .7rem .9rem;
+  margin: .3rem 0 .6rem;
+}
+.console-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .5rem;
+  font-size: 11px;
+  letter-spacing: .12em;
+  font-weight: 600;
+  color: var(--eau);
+}
+.console-head small {
+  color: var(--encre);
+  opacity: .6;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+.console-steps {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  margin-top: .55rem;
+}
+.console-step {
+  display: flex;
+  gap: .6rem;
+  align-items: flex-start;
+  border: 1px solid var(--craie);
+  border-left: 4px solid var(--craie);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: .45rem .6rem;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: consoleIn 380ms var(--anim-ease-out) calc(var(--cs-i) * 160ms) forwards;
+}
+.console-step.ok { border-left-color: var(--sur); }
+.console-step.warn { border-left-color: var(--vigilance); }
+.console-step.action { border-left-color: var(--rupture); }
+.console-step.ok .console-icon { color: var(--sur); }
+.console-step.warn .console-icon { color: var(--vigilance); }
+.console-step.action .console-icon { color: var(--rupture); }
+.console-icon {
+  font-weight: 700;
+  line-height: 1.25;
+  min-width: 14px;
+}
+.console-step b { display: block; font-size: 13px; }
+.console-step small {
+  display: block;
+  color: var(--encre);
+  opacity: .82;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.console-time {
+  margin-left: auto;
+  font: 11px ui-monospace, monospace;
+  color: var(--encre);
+  opacity: .55;
+  white-space: nowrap;
+  padding-top: .15rem;
+}
+@keyframes consoleIn {
+  to { opacity: 1; transform: none; }
+}
+
+/* Graphique lame d'eau : barres qui poussent en séquence */
+.water-bar {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: waterGrow 700ms var(--anim-ease-out) calc(var(--wc-i) * 130ms) both;
+}
+@keyframes waterGrow {
+  from { transform: scaleY(0); opacity: 0; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+/* Carte parcelle : parcelles RPG + stations d'eau */
+.parcel-map {
+  border: 1px solid var(--craie);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: .5rem .6rem;
+  margin: .4rem 0;
+}
+.parcel-map svg polygon {
+  transition: fill 300ms var(--anim-ease), opacity 300ms var(--anim-ease);
+}
+.parcel-map svg a:hover polygon {
+  fill: var(--eau);
+  opacity: 1;
+}
+.station-marker {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: stationIn 520ms var(--anim-ease-out) calc(var(--st-i) * 140ms) both;
+}
+@keyframes stationIn {
+  from { opacity: 0; transform: scale(.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+.parcel-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: .45rem;
+  margin-top: .45rem;
+}
+.parcel-card {
+  border: 1px solid var(--craie);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: 0 .6rem;
+}
+.parcel-card[open] { border-left: 4px solid var(--eau); }
+.parcel-card summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: .5rem 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.parcel-card summary::-webkit-details-marker { display: none; }
+.parcel-card summary::after {
+  content: "＋";
+  color: var(--eau);
+  transition: transform 300ms var(--anim-ease);
+}
+.parcel-card[open] summary::after { transform: rotate(45deg); }
+.parcel-card-area {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--encre);
+  opacity: .7;
+  white-space: nowrap;
+}
+.parcel-card dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .2rem .6rem;
+  margin: 0 0 .5rem;
+  font-size: 12px;
+}
+.parcel-card dt { opacity: .75; }
+.parcel-card dd { margin: 0; text-align: right; }
+.parcel-card a { scroll-margin-top: 90px; }
+
 /* Reduced motion support for new animations */
 @media (prefers-reduced-motion: reduce) {
   .animate-mask-reveal,
@@ -483,6 +835,17 @@ button[kind="primary"] p, [data-testid="stBaseButton-primary"] p { color:var(--p
   .animate-divider::before,
   .animate-count-up,
   .page-intro,
+  .lineage,
+  .lineage.is-visible .lineage-node,
+  .lineage-node,
+  .lineage-edge,
+  .lineage-node .lineage-dot,
+  .lineage-card summary::after,
+  .console-step,
+  .cascade-node,
+  .cascade-arrow,
+  .water-bar,
+  .station-marker,
   .page-transition-enter-active,
   .page-transition-exit-active {
     animation: none !important;
