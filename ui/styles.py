@@ -37,6 +37,7 @@ code, pre, time, .mono, [data-testid="stMetricValue"], td { font-family:"IBM Ple
 .eyebrow { font-size:11px; letter-spacing:.09em; font-weight:600; opacity:.65; }
 .final-warning { border-top:1px solid var(--craie); margin-top:.8rem; padding:.6rem 0; max-width:900px; }
 .final-warning p { margin:.3rem 0; }
+.final-warning a { color:var(--eau); font-size:13.5px; font-weight:500; margin-top:.45rem; display:inline-flex; }
 .section-kicker { font-size:12px; letter-spacing:.1em; font-weight:600; }
 .section-kicker::before, .article-divider span::before, .expert-divider > span::before, .report-section-kicker::before { content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:currentColor; margin-right:.4em; opacity:.8; vertical-align:middle; }
 .soil-compact,.parcel-line { display:flex; gap:1.2rem; row-gap:.3rem; flex-wrap:wrap; align-items:baseline; padding:.55rem 0; }.soil-compact span,.parcel-line span { padding-right:1.2rem; border-right:1px solid var(--craie); }.soil-compact span:last-child,.parcel-line span:last-child { border-right:none; padding-right:0; }.soil-compact b,.parcel-line span { font-family:ui-monospace,monospace; }
@@ -238,8 +239,8 @@ button[kind="primary"] p, [data-testid="stBaseButton-primary"] p { color:var(--p
 .animate-fade-up {
   opacity: 0;
   transform: translateY(30px);
-  transition: opacity var(--anim-duration-slow) var(--anim-ease-out),
-              transform var(--anim-duration-slow) var(--anim-ease-out);
+  transition: opacity var(--anim-duration-base) var(--anim-ease-out),
+              transform var(--anim-duration-base) var(--anim-ease-out);
 }
 .animate-fade-up.is-visible {
   opacity: 1;
@@ -249,6 +250,36 @@ button[kind="primary"] p, [data-testid="stBaseButton-primary"] p { color:var(--p
 .animate-fade-up-delay-2 { transition-delay: 200ms; }
 .animate-fade-up-delay-3 { transition-delay: 300ms; }
 .animate-fade-up-delay-4 { transition-delay: 400ms; }
+
+/* 11. Animated Underline — soulignement animé au survol des intitulés de section */
+.om-kicker,
+.report-section-kicker,
+.section-kicker,
+.eyebrow {
+  position: relative;
+}
+.om-kicker::after,
+.report-section-kicker::after,
+.section-kicker::after,
+.eyebrow::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  opacity: .7;
+  transition: width var(--anim-duration-base) var(--anim-ease),
+              left var(--anim-duration-base) var(--anim-ease);
+}
+.om-kicker:hover::after,
+.report-section-kicker:hover::after,
+.section-kicker:hover::after,
+.eyebrow:hover::after {
+  width: 100%;
+  left: 0;
+}
 
 /* 4. Staggered Scroll Reveal — children animate in sequence */
 .animate-stagger > * {
@@ -279,7 +310,8 @@ button[kind="primary"] p, [data-testid="stBaseButton-primary"] p { color:var(--p
   overflow: hidden;
 }
 .animate-vertical-mask > img,
-.animate-vertical-mask > .image-wrapper {
+.animate-vertical-mask > .image-wrapper,
+.animate-vertical-mask > * {
   animation: verticalMaskReveal var(--anim-duration-slow) var(--anim-ease-out) both;
 }
 
@@ -292,7 +324,8 @@ button[kind="primary"] p, [data-testid="stBaseButton-primary"] p { color:var(--p
   overflow: hidden;
 }
 .animate-scale-down > img,
-.animate-scale-down > .image-wrapper {
+.animate-scale-down > .image-wrapper,
+.animate-scale-down > * {
   animation: scaleDownReveal 1s var(--anim-ease-out) both;
 }
 
@@ -310,11 +343,13 @@ button[kind="primary"] p, [data-testid="stBaseButton-primary"] p { color:var(--p
   overflow: hidden;
 }
 .animate-zoom-hover > img,
-.animate-zoom-hover > .image-wrapper {
+.animate-zoom-hover > .image-wrapper,
+.animate-zoom-hover > * {
   transition: transform var(--anim-duration-slow) var(--anim-ease);
 }
 .animate-zoom-hover:hover > img,
-.animate-zoom-hover:hover > .image-wrapper {
+.animate-zoom-hover:hover > .image-wrapper,
+.animate-zoom-hover:hover > * {
   transform: scale(1.04);
 }
 
@@ -382,14 +417,13 @@ button[kind="primary"] p, [data-testid="stBaseButton-primary"] p { color:var(--p
   animation: dividerReveal var(--anim-duration-slow) var(--anim-ease-out) both;
 }
 
-/* 13. Count-up Animation — numbers count up (CSS shows final value, JS for actual counting) */
-@keyframes countUp {
-  from { --count: 0; }
-  to { --count: var(--target); }
-}
+/* 13. Count-up Animation — numbers count up (JS, déclenché à l'intersection) */
 .animate-count-up {
-  --target: 100;
-  animation: countUp var(--anim-duration-slow) var(--anim-ease-out) both;
+  opacity: 0;
+  transition: opacity var(--anim-duration-base) var(--anim-ease);
+}
+.animate-count-up.counting {
+  opacity: 1;
 }
 
 /* 14. Page-load Intro Sequence — orchestrates multiple animations */
@@ -406,10 +440,16 @@ button[kind="primary"] p, [data-testid="stBaseButton-primary"] p { color:var(--p
 .page-intro > *:nth-child(3) { animation: maskReveal 600ms var(--anim-ease-out) 300ms both; }
 .page-intro > *:nth-child(4) { animation: maskReveal 600ms var(--anim-ease-out) 400ms both; }
 
+/* 12. Horizontal Divider Reveal — line draws from center (revoir l'espacement) */
+.animate-divider {
+  margin: .7rem 0;
+}
+
 /* 15. Smooth Page Fade Transition — for multi-step flows */
 .page-transition-enter {
   opacity: 0;
   transform: translateX(20px);
+  will-change: opacity, transform;
 }
 .page-transition-enter-active {
   opacity: 1;

@@ -36,6 +36,7 @@ from ui.scenario_timeline import render_crop_scenario
 from ui.step_nav import render_step_indicator
 from ui.styles import CSS
 from ui.weather_scene import compute_header_state, render_header_scene, render_grass_band
+from ui import animations as anim
 
 ROOT = Path(__file__).resolve().parent
 STEP_LABELS = ["Parcelle & résultat", "Scénario météo", "Détails techniques"]
@@ -83,6 +84,16 @@ def go_to_step(step: int) -> None:
 
 def go_to_assolement_screen(screen: int) -> None:
     st.session_state.assolement_screen = screen
+
+
+def maybe_transition(content: str, key: str) -> str:
+    """Enveloppe le contenu d'une transition de page (15) uniquement quand on
+    change d'étape/écran — les reruns liés aux widgets ne refont pas le fondu."""
+    previous = st.session_state.get("_fade_key")
+    st.session_state._fade_key = key
+    if previous != key:
+        return anim.page_transition(content)
+    return content
 
 
 def assolement_nav() -> None:
@@ -185,8 +196,20 @@ def render_question_screen(graph: dict, culture_specs: list[dict]) -> None:
     with nav_body:
         st.markdown(intro_slide_html(st.session_state.intro_slide), unsafe_allow_html=True)
 
-    st.markdown('<div class="report-section-kicker">VOTRE PARCELLE</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:16px;font-weight:600;margin-bottom:.9rem;">Ce que vous vous apprêtez à semer aura-t-il soif au moment où il n\'y aura plus d\'eau ?</div>', unsafe_allow_html=True)
+    st.markdown(anim.mask_reveal('<div class="report-section-kicker">VOTRE PARCELLE</div>', tag="div"), unsafe_allow_html=True)
+    st.markdown(
+        '<div style="font-size:16px;font-weight:600;margin-bottom:.9rem;">'
+        + anim.split_line_reveal(
+            [
+                "Ce que vous vous apprêtez à semer",
+                "aura-t-il soif au moment où",
+                "il n'y aura plus d'eau ?",
+            ],
+            tag="span",
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
 
     commune_query = st.text_input("Commune", value="Vierzon", help="Saisissez la commune où se trouve votre parcelle.")
     load_real = st.button("Chercher les parcelles", width="stretch")
@@ -213,17 +236,17 @@ def render_question_screen(graph: dict, culture_specs: list[dict]) -> None:
     with st.spinner("Recherche des informations de sol…"):
         resolved_soil = cached_resolve_soil(parcel)
     parcel = dict(parcel, sol=resolved_soil.soil_type, reserve_utile_mm=resolved_soil.reserve_utile_mm, soil_resolution={"method": resolved_soil.method, "source": resolved_soil.source, "confidence": resolved_soil.confidence, "detail": resolved_soil.detail})
-    st.markdown(
+    soil_card = (
         '<div class="om-soil-card">'
         '<div class="om-soil-kicker">Analyse de sol de la parcelle</div>'
         '<div class="om-soil-grid">'
         f'<div><span>Sol</span><strong>{resolved_soil.soil_type}</strong></div>'
-        f'<div><span>Réserve utile</span><strong>{resolved_soil.reserve_utile_mm} mm</strong></div>'
+        f'<div><span>Réserve utile</span><strong>{anim.count_up_number(int(resolved_soil.reserve_utile_mm), suffix=" mm")}</strong></div>'
         f'<div><span>Confiance</span><strong class="lvl-{resolved_soil.confidence}">{resolved_soil.confidence}</strong></div>'
         '</div>'
-        '</div>',
-        unsafe_allow_html=True,
+        '</div>'
     )
+    st.markdown(anim.fade_up(anim.card_hover(soil_card)), unsafe_allow_html=True)
     with st.expander("J’ai une analyse de sol plus précise"):
         known_soil = st.selectbox("Type de sol mesuré", [resolved_soil.soil_type, "limono-argileux", "limoneux", "argileux", "sableux", "autre / inconnu"])
         known_ru = st.number_input("Réserve utile mesurée (mm)", 30, 250, resolved_soil.reserve_utile_mm, 5)
@@ -231,7 +254,7 @@ def render_question_screen(graph: dict, culture_specs: list[dict]) -> None:
             parcel = dict(parcel, sol=known_soil, reserve_utile_mm=int(known_ru), soil_resolution={"method": "mesure_utilisateur", "source": "analyse utilisateur", "confidence": "haute", "detail": "Analyse déclarée comme mesurée."})
 
     parcel_line_facts = f'<span>{parcel["commune"]}</span><span>{parcel["surface_ha"]} ha</span><span>{parcel["sol"]}</span><span>RU {parcel["reserve_utile_mm"]} mm</span>'
-    st.markdown(f'<div class="parcel-line">{parcel_line_facts}</div>', unsafe_allow_html=True)
+    st.markdown(anim.fade_up(f'<div class="parcel-line">{parcel_line_facts}</div>', delay=1), unsafe_allow_html=True)
     calculate = st.button("Comparer les cultures pour cette parcelle", type="primary", width="stretch")
     if calculate:
         result = build_recommendation(graph, parcel, culture_specs, sowing, horizon, date(2026, 7, 30))
@@ -269,25 +292,36 @@ def archive_report(result: dict, simulated_by_culture: dict) -> None:
 
 def render_answer_screen(result: dict) -> None:
     """Écran 2 — La réponse : confiance, calendrier, analyse et chiffrage."""
-    st.markdown(screen_kicker_html("LA RÉPONSE"), unsafe_allow_html=True)
+    st.markdown(anim.mask_reveal(screen_kicker_html("LA RÉPONSE")), unsafe_allow_html=True)
     confidence_notice(result)
     quality = build_quality_certificate(result)
-    st.markdown(f'<section class="trust-banner"><div><span>CERTIFICAT DES DONNÉES</span><strong>{quality["statement"]}</strong><p>Traçabilité vérifiée : <b>{"oui" if quality["lineage_verified"] else "non"}</b> · garanties élevées : <b>{quality["verified_count"]}/{quality["total_count"]}</b>.</p></div><div class="trust-seal">{quality["verified_count"]}/{quality["total_count"]}<small>preuves fortes</small></div></section>', unsafe_allow_html=True)
+    seal = anim.count_up_number(quality["verified_count"], suffix="/" + str(quality["total_count"]))
+    st.markdown(
+        anim.fade_up(
+            anim.card_hover(
+                f'<section class="trust-banner"><div><span>CERTIFICAT DES DONNÉES</span><strong>{quality["statement"]}</strong><p>Traçabilité vérifiée : <b>{"oui" if quality["lineage_verified"] else "non"}</b> · garanties élevées : <b>{quality["verified_count"]}/{quality["total_count"]}</b>.</p></div>'
+                f'<div class="trust-seal">{seal}<small>preuves fortes</small></div></section>'
+            )
+        ),
+        unsafe_allow_html=True,
+    )
     if not result["cultures"]:
         st.info("Aucune culture ne peut être chiffrée avec ce niveau de confiance.")
         return
 
-    st.markdown(render_timeline(result), unsafe_allow_html=True)
+    st.markdown(anim.fade_up(render_timeline(result)), unsafe_allow_html=True)
     st.markdown('<div class="report-section">', unsafe_allow_html=True)
-    st.markdown('<div class="report-section-kicker">RAPPORT</div>', unsafe_allow_html=True)
+    st.markdown(anim.mask_reveal('<div class="report-section-kicker">RAPPORT</div>', tag="div"), unsafe_allow_html=True)
     st.markdown(
-        '<div style="margin-bottom:.4rem;">'
-        '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;opacity:.55;margin-bottom:4px;">Ce qu\'il faut retenir</div>'
-        f'<div style="font-size:15px;font-weight:600;">{retain_sentence(result)}</div>'
-        '</div>',
+        anim.fade_up(
+            '<div style="margin-bottom:.4rem;">'
+            '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;opacity:.55;margin-bottom:4px;">Ce qu\'il faut retenir</div>'
+            f'<div style="font-size:15px;font-weight:600;">{retain_sentence(result)}</div>'
+            '</div>'
+        ),
         unsafe_allow_html=True,
     )
-    st.markdown(analysis_article(result), unsafe_allow_html=True)
+    st.markdown(anim.fade_up(analysis_article(result), delay=1), unsafe_allow_html=True)
 
     st.markdown(
         '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;opacity:.55;margin:.7rem 0 .2rem;">Simulez avec vos propres chiffres</div>',
@@ -351,16 +385,16 @@ def render_answer_screen(result: dict) -> None:
 
 def render_avoid_screen(result: dict) -> None:
     """Écran 3 — Comment éviter : les leviers d'action et le panneau « pas de risque »."""
-    st.markdown(screen_kicker_html("COMMENT ÉVITER"), unsafe_allow_html=True)
+    st.markdown(anim.mask_reveal(screen_kicker_html("COMMENT ÉVITER")), unsafe_allow_html=True)
     if not result["cultures"]:
         st.info("Aucune culture à analyser.")
         return
     at_risk_crops = [c for c in result["cultures"] if c["etat"] != "sûr"]
     risky = max(at_risk_crops, key=lambda c: c["recouvrement_avec_tension_j"]) if at_risk_crops else None
     if risky:
-        st.markdown(levers_panel(risky), unsafe_allow_html=True)
+        st.markdown(anim.fade_up(anim.card_hover(levers_panel(risky))), unsafe_allow_html=True)
     else:
-        st.markdown(no_risk_panel_html(), unsafe_allow_html=True)
+        st.markdown(anim.fade_up(no_risk_panel_html()), unsafe_allow_html=True)
 
 
 def datahub_banner_html(graph: dict) -> str:
@@ -369,46 +403,57 @@ def datahub_banner_html(graph: dict) -> str:
     source_urns = [urn for urn in graph["datasets"] if urn not in {t for v in graph["lineage"].values() for t in v}]
     edges = sum(len(targets) for targets in graph["lineage"].values())
     if not client.enabled:
-        return (
+        banner = (
             '<div class="datahub-banner datahub-off"><span class="datahub-dot"></span><div>'
             "<strong>Graphe de contexte DataHub — mode démonstration locale</strong>"
             f"<p>L'agent fonctionne sur <code>fixtures/graph.json</code> ({len(source_urns)} sources, {edges} relations de lineage). Définissez <code>DATAHUB_GMS_URL</code> pour lire la fraîcheur dans DataHub et écrire runs et incidents dans le graphe.</p>"
             "</div></div>"
         )
-    if not client.connected():
-        return (
+    elif not client.connected():
+        banner = (
             '<div class="datahub-banner datahub-off"><span class="datahub-dot"></span><div>'
             "<strong>Graphe DataHub injoignable</strong>"
             f"<p>Repli local : les métadonnées de <code>fixtures/graph.json</code> sont utilisées. <code>{client.gms_url}</code> ne répond pas.</p>"
             "</div></div>"
         )
-    freshness = client.freshness_summary(source_urns)
-    badges = []
-    for urn in source_urns:
-        info = freshness["sources"].get(urn, {})
-        name = short_name(urn)
-        if info.get("status") == "stale":
-            badges.append(f'<b style="color:var(--vigilance)">{name}</b><span>dépassé de {info["delta_days"]} j (SLA {info["sla_days"]} j)</span>')
-        elif info.get("status") == "ok":
-            badges.append(f"<b>{name}</b><span>à jour</span>")
-        else:
-            badges.append(f"<b>{name}</b><span>inconnue</span>")
-    badges_html = "".join(f"<div>{badge}</div>" for badge in badges)
-    return (
-        '<div class="datahub-banner"><span class="datahub-dot"></span><div>'
-        f"<strong>Graphe de contexte DataHub — connecté ({client.gms_url})</strong>"
-        f"<p>Fraîcheur des {len(source_urns)} sources lue dans DataHub : {freshness['ok']} à jour · {freshness['stale']} en dépassement de SLA · {freshness['unknown']} inconnues · {edges} relations de lineage.</p>"
-        f'<div class="datahub-src">{badges_html}</div>'
-        "</div></div>"
-    )
+    else:
+        freshness = client.freshness_summary(source_urns)
+        badges = []
+        for urn in source_urns:
+            info = freshness["sources"].get(urn, {})
+            name = short_name(urn)
+            if info.get("status") == "stale":
+                badges.append(f'<b style="color:var(--vigilance)">{name}</b><span>dépassé de {info["delta_days"]} j (SLA {info["sla_days"]} j)</span>')
+            elif info.get("status") == "ok":
+                badges.append(f"<b>{name}</b><span>à jour</span>")
+            else:
+                badges.append(f"<b>{name}</b><span>inconnue</span>")
+        badges_html = "".join(f"<div>{badge}</div>" for badge in badges)
+        banner = (
+            '<div class="datahub-banner"><span class="datahub-dot"></span><div>'
+            f"<strong>Graphe de contexte DataHub — connecté ({client.gms_url})</strong>"
+            f"<p>Fraîcheur des {len(source_urns)} sources lue dans DataHub : {freshness['ok']} à jour · {freshness['stale']} en dépassement de SLA · {freshness['unknown']} inconnues · {edges} relations de lineage.</p>"
+            f'<div class="datahub-src">{badges_html}</div>'
+            "</div></div>"
+        )
+    return anim.fade_up(anim.card_hover(banner))
 
 
 def render_provenance_screen(result: dict, graph: dict) -> None:
     """Écran 4 — D'où viennent ces chiffres : l'épine de données, le certificat et la vue experte."""
-    st.markdown(screen_kicker_html("D'OÙ VIENNENT CES CHIFFRES ?"), unsafe_allow_html=True)
+    st.markdown(anim.mask_reveal(screen_kicker_html("D'OÙ VIENNENT CES CHIFFRES ?")), unsafe_allow_html=True)
     quality = build_quality_certificate(result)
     confidence_notice(result)
-    st.markdown(f'<section class="trust-banner"><div><span>CERTIFICAT DES DONNÉES</span><strong>{quality["statement"]}</strong><p>Traçabilité vérifiée : <b>{"oui" if quality["lineage_verified"] else "non"}</b> · garanties élevées : <b>{quality["verified_count"]}/{quality["total_count"]}</b>.</p></div><div class="trust-seal">{quality["verified_count"]}/{quality["total_count"]}<small>preuves fortes</small></div></section>', unsafe_allow_html=True)
+    seal = anim.count_up_number(quality["verified_count"], suffix="/" + str(quality["total_count"]))
+    st.markdown(
+        anim.fade_up(
+            anim.card_hover(
+                f'<section class="trust-banner"><div><span>CERTIFICAT DES DONNÉES</span><strong>{quality["statement"]}</strong><p>Traçabilité vérifiée : <b>{"oui" if quality["lineage_verified"] else "non"}</b> · garanties élevées : <b>{quality["verified_count"]}/{quality["total_count"]}</b>.</p></div>'
+                f'<div class="trust-seal">{seal}<small>preuves fortes</small></div></section>'
+            )
+        ),
+        unsafe_allow_html=True,
+    )
     st.markdown(datahub_banner_html(graph), unsafe_allow_html=True)
     st.markdown('<div class="assolement-spine-full">', unsafe_allow_html=True)
     st.markdown(render_spine(graph, set(st.session_state.get("impacted", []))), unsafe_allow_html=True)
@@ -417,7 +462,7 @@ def render_provenance_screen(result: dict, graph: dict) -> None:
     st.markdown('<div class="report-subhead">Détails techniques et vue experte</div>', unsafe_allow_html=True)
     with st.expander("Voir tous les chiffres et la confiance", expanded=False):
         confidence_dashboard(result)
-        st.markdown('<div class="quality-list">' + "".join(f'<div class="quality-{item["level"]}"><span>{item["name"]}</span><b>{item["level"]}</b><small>{item["evidence"]}</small></div>' for item in quality["checks"]) + '</div>', unsafe_allow_html=True)
+        st.markdown('<div class="quality-list animate-stagger">' + "".join(f'<div class="quality-{item["level"]}"><span>{item["name"]}</span><b>{item["level"]}</b><small>{item["evidence"]}</small></div>' for item in quality["checks"]) + '</div>', unsafe_allow_html=True)
         st.dataframe([{"Culture": crop["culture"], "Jours à risque": crop["recouvrement_avec_tension_j"], "Eau (mm)": crop["besoin_irrigation_mm"], "Budget irrigation (€/ha)": crop["cout_eau_eur_ha"], "Résultat estimé (€/ha)": crop["marge_brute_eur_ha"]} for crop in result["cultures"]], hide_index=True, width="stretch")
     with st.expander("Sources de secours essayées"):
         for attempt in result.get("resolution_log", []):
@@ -425,7 +470,7 @@ def render_provenance_screen(result: dict, graph: dict) -> None:
             st.write(f'{symbol} **{attempt["field"].capitalize()}** — {attempt["source"]} : {attempt["status"]}')
     with st.expander("Vue experte : audit des données et des modèles"):
         expert = build_expert_report(result)
-        st.markdown(f'<div class="expert-heading"><div><span>SCORE TECHNIQUE MOYEN</span><strong>{expert["overall_score"]}/100</strong></div><p>Ce score résume la qualité technique des entrées. Il ne prédit pas le rendement futur.</p></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="expert-heading"><div><span>SCORE TECHNIQUE MOYEN</span><strong>{anim.count_up_number(expert["overall_score"])}<span style="opacity:.6">/100</span></strong></div><p>Ce score résume la qualité technique des entrées. Il ne prédit pas le rendement futur.</p></div>', unsafe_allow_html=True)
         collected_tab, failed_tab, models_tab, scores_tab = st.tabs(["Données collectées", "Sources en échec", "Modèles utilisés", "Scores"])
         with collected_tab:
             st.dataframe(expert["collected"], hide_index=True, width="stretch")
@@ -445,6 +490,7 @@ def render_provenance_screen(result: dict, graph: dict) -> None:
 
 st.set_page_config(page_title="Terroir Context Agents", layout="wide", initial_sidebar_state="collapsed")
 st.markdown(CSS, unsafe_allow_html=True)
+anim.inject_scroll_animations()
 
 try:
     graph = load_graph(ROOT / "fixtures/graph.json")
@@ -454,8 +500,12 @@ except (ValueError, RuntimeError) as exc:
     st.stop()
 
 weather_state = compute_header_state(st.session_state)
+hero = render_header_scene(weather_state, "PRÉPARER MON PROCHAIN SEMIS", "Quelle culture choisir pour ma parcelle ?")
+# En-tête : parallaxe douce au scroll (7) + séquence d'intro au chargement (14) + zoom arrière (6).
 st.markdown(
-    render_header_scene(weather_state, "PRÉPARER MON PROCHAIN SEMIS", "Quelle culture choisir pour ma parcelle ?"),
+    '<div class="parallax-container"><div class="parallax-image"><div class="page-intro">'
+    f'<div class="animate-scale-down">{hero}</div>'
+    "</div></div></div>",
     unsafe_allow_html=True,
 )
 
@@ -470,11 +520,11 @@ if "result" not in st.session_state and st.session_state.assolement_screen > 1:
     st.session_state.assolement_screen = 1
 
 if step > 1:
-    st.markdown(render_step_indicator(step, STEP_LABELS), unsafe_allow_html=True)
+    st.markdown(anim.fade_up(render_step_indicator(step, STEP_LABELS)), unsafe_allow_html=True)
 
 # --- Étape 1 : tunnel assolement en 4 écrans ------------------------------
 if step == 1:
-    st.markdown(tunnel_header_html(st.session_state.assolement_screen, ASSOLEMENT_SCREEN_COUNT), unsafe_allow_html=True)
+    tunnel_content = anim.fade_up(tunnel_header_html(st.session_state.assolement_screen, ASSOLEMENT_SCREEN_COUNT))
     if st.session_state.assolement_screen == 4:
         with st.container(key="om_wide"):
             render_provenance_screen(st.session_state.result, graph)
@@ -486,23 +536,31 @@ if step == 1:
                 render_answer_screen(st.session_state.result)
             else:
                 render_avoid_screen(st.session_state.result)
+    st.markdown(anim.animated_divider("var(--craie)"), unsafe_allow_html=True)
     assolement_nav()
 
 # --- Étape 2 : scénario météo dans le temps ------------------------------
 elif step == 2:
     result = st.session_state.result
-    st.markdown('<div class="article-divider"><span>SCÉNARIO — DU SEMIS À LA RÉCOLTE</span></div>', unsafe_allow_html=True)
+    st.markdown(
+        maybe_transition(
+            anim.animated_divider("var(--encre)")
+            + anim.fade_up('<div class="article-divider"><span>SCÉNARIO — DU SEMIS À LA RÉCOLTE</span></div>'),
+            key="step2",
+        ),
+        unsafe_allow_html=True,
+    )
     st.caption("Une frise par culture : la météo prévue mois par mois, avec le repère du moment où la culture est la plus exposée.")
     if st.button("▶ Lecture", key="play_timeline"):
         st.session_state.timeline_play_token = st.session_state.get("timeline_play_token", 0) + 1
     play_token = st.session_state.get("timeline_play_token", 0)
     tension_months = {m["mois"] for m in result["fenetre_de_tension"]}
-    for crop in result["cultures"]:
-        st.markdown(render_crop_scenario(crop, tension_months, play_token), unsafe_allow_html=True)
+    for index, crop in enumerate(result["cultures"]):
+        st.markdown(anim.fade_up(render_crop_scenario(crop, tension_months, play_token), delay=index % 4), unsafe_allow_html=True)
 
     with st.expander("Voir le calendrier détaillé"):
         svg, alternative = calendar_svg(result)
-        st.markdown(svg, unsafe_allow_html=True)
+        st.markdown(f'<div class="animate-vertical-mask animate-zoom-hover">{svg}</div>', unsafe_allow_html=True)
         st.caption(alternative)
 
     step_nav(prev_step=1, prev_label="← Retour au résultat", next_step=3, next_label="Voir les détails techniques →")
@@ -512,9 +570,19 @@ elif step == 3:
     result = st.session_state.result
     quality = build_quality_certificate(result)
 
+    st.markdown(
+        maybe_transition(
+            anim.animated_divider("var(--eau)")
+            + '<div style="height:.2rem;"></div>'
+            + anim.mask_reveal('<div class="report-section-kicker">DÉTAILS TECHNIQUES</div>', tag="div"),
+            key="step3",
+        ),
+        unsafe_allow_html=True,
+    )
+
     with st.expander("Voir tous les chiffres et la confiance", expanded=True):
         confidence_dashboard(result)
-        st.markdown('<div class="quality-list">' + "".join(f'<div class="quality-{item["level"]}"><span>{item["name"]}</span><b>{item["level"]}</b><small>{item["evidence"]}</small></div>' for item in quality["checks"]) + '</div>', unsafe_allow_html=True)
+        st.markdown('<div class="quality-list animate-stagger">' + "".join(f'<div class="quality-{item["level"]}"><span>{item["name"]}</span><b>{item["level"]}</b><small>{item["evidence"]}</small></div>' for item in quality["checks"]) + '</div>', unsafe_allow_html=True)
         st.dataframe([{"Culture": crop["culture"], "Jours à risque": crop["recouvrement_avec_tension_j"], "Eau (mm)": crop["besoin_irrigation_mm"], "Budget irrigation (€/ha)": crop["cout_eau_eur_ha"], "Résultat estimé (€/ha)": crop["marge_brute_eur_ha"]} for crop in result["cultures"]], hide_index=True, width="stretch")
     with st.expander("D’où viennent les données ?"):
         st.markdown(render_spine(graph, set(st.session_state.get("impacted", []))), unsafe_allow_html=True)
@@ -525,7 +593,7 @@ elif step == 3:
 
     st.markdown('<div class="expert-divider"><span>VUE EXPERTE</span><h2>Audit des données et des modèles</h2><p>Cette section reste visible pour contrôler exactement ce qui a été collecté, rejeté et calculé.</p></div>', unsafe_allow_html=True)
     expert = build_expert_report(result)
-    st.markdown(f'<div class="expert-heading"><div><span>SCORE TECHNIQUE MOYEN</span><strong>{expert["overall_score"]}/100</strong></div><p>Ce score résume la qualité technique des entrées. Il ne prédit pas le rendement futur.</p></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="expert-heading"><div><span>SCORE TECHNIQUE MOYEN</span><strong>{anim.count_up_number(expert["overall_score"])}<span style="opacity:.6">/100</span></strong></div><p>Ce score résume la qualité technique des entrées. Il ne prédit pas le rendement futur.</p></div>', unsafe_allow_html=True)
     collected_tab, failed_tab, models_tab, scores_tab = st.tabs(["Données collectées", "Sources en échec", "Modèles utilisés", "Scores"])
     with collected_tab:
         st.write("Valeurs et métadonnées effectivement utilisées dans ce calcul.")
@@ -546,7 +614,7 @@ elif step == 3:
         st.dataframe(expert["scores"], hide_index=True, width="stretch")
         st.caption("Le score moyen ne remplace pas la porte de confiance : une source critique peut bloquer tous les résultats.")
 
-    st.markdown('<section class="sentinel-box"><div><div class="section-kicker">TEST DE SÉCURITÉ</div><h3>Que se passe-t-il si une station ne répond plus ?</h3><p>La Sentinelle suit les calculs dépendants et barre automatiquement les recommandations devenues fragiles.</p></div></section>', unsafe_allow_html=True)
+    st.markdown(anim.fade_up(anim.card_hover('<section class="sentinel-box"><div><div class="section-kicker">TEST DE SÉCURITÉ</div><h3>Que se passe-t-il si une station ne répond plus ?</h3><p>La Sentinelle suit les calculs dépendants et barre automatiquement les recommandations devenues fragiles.</p></div></section>')), unsafe_allow_html=True)
     if st.button("Simuler une panne de station", width="stretch"):
         simulation = simulate_station_failure(ROOT / "fixtures/graph.json", ROOT / "reports", len(result["cultures"]), date(2026, 7, 30))
         st.session_state.impacted = simulation["impacted"]
@@ -564,13 +632,22 @@ elif step == 3:
         if st.session_state.get("incident_urn"):
             st.caption(f"Incident ouvert dans le graphe DataHub : {st.session_state['incident_urn']}")
         impacted_names = [urn.split(",")[1] if "," in urn else urn for urn in simulation.get("impacted", [])]
-        st.markdown('<div class="failure-flow"><span><b>1</b> hubeau_hydrometrie<br><small>station simulée hors délai</small></span><i>→</i><span><b>2</b> features_bilan_hydrique<br><small>calcul d’eau invalidé</small></span><i>→</i><span><b>3</b> scenarios_cultures<br><small>scénarios invalidés</small></span><i>→</i><span><b>4</b> recommandations<br><small>résultats barrés</small></span></div>', unsafe_allow_html=True)
+        flow_items = [
+            '<span><b>1</b> hubeau_hydrometrie<br><small>station simulée hors délai</small></span>',
+            "<i>→</i>",
+            '<span><b>2</b> features_bilan_hydrique<br><small>calcul d’eau invalidé</small></span>',
+            "<i>→</i>",
+            '<span><b>3</b> scenarios_cultures<br><small>scénarios invalidés</small></span>',
+            "<i>→</i>",
+            '<span><b>4</b> recommandations<br><small>résultats barrés</small></span>',
+        ]
+        st.markdown(f'<div class="failure-flow animate-stagger">{"".join(flow_items)}</div>', unsafe_allow_html=True)
         st.write("**Éléments touchés :** " + ", ".join(impacted_names))
         if simulation.get("report_path"):
             st.code(simulation["report_path"], language=None)
         st.button("Rétablir la station et recalculer", type="primary", width="stretch", on_click=restore_station)
 
     st.markdown(render_grass_band(), unsafe_allow_html=True)
-    st.markdown('<div class="final-warning"><strong>Avant de décider</strong><p>Confirmez l’analyse de sol, vos prix, vos charges, votre accès à l’eau et la place de la culture dans votre rotation avec votre conseiller.</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="final-warning"><strong>Avant de décider</strong><p>Confirmez l’analyse de sol, vos prix, vos charges, votre accès à l’eau et la place de la culture dans votre rotation avec votre conseiller.</p>' + anim.arrow_slide("Voir le projet, les sources et les limites", href="https://github.com/faten-elouta/Agriculteur#readme") + '</div>', unsafe_allow_html=True)
 
     step_nav(prev_step=2, prev_label="← Retour au scénario météo")

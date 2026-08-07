@@ -1,4 +1,13 @@
-"""Animation utilities for Streamlit - scroll-triggered animations via IntersectionObserver."""
+"""Animation utilities for Streamlit - scroll-triggered animations via IntersectionObserver.
+
+Les helpers HTML injectent des classes CSS (définies dans ui/styles.py) et ce
+module injecte le JavaScript qui pilote les animations par intersection.
+
+Contrainte Streamlit : st.components.v1.html rend le script dans une iframe
+isolée. Le DOM de l'application vit dans l'iframe parente — le script cible
+donc window.parent.document (même origine : fonctionne en local, Streamlit
+Cloud, Render et Vercel).
+"""
 
 from __future__ import annotations
 
@@ -8,27 +17,38 @@ from streamlit.components.v1 import html
 
 SCROLL_ANIMATION_SCRIPT = """
 <script>
-// IntersectionObserver for scroll-triggered animations
 (function() {
   'use strict';
+  var doc = window.parent.document;
 
-  const observerOptions = {
-    root: null,
-    rootMargin: '0px 0px -10% 0px',
-    threshold: 0.1
-  };
+  var observerOptions = { root: null, rootMargin: '0px 0px -10% 0px', threshold: 0.1 };
+  var countOptions = { root: null, rootMargin: '0px 0px -5% 0px', threshold: 0.4 };
 
-  const fadeUpObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
+  function observeAll() {
+    var els;
+    els = doc.querySelectorAll('.animate-fade-up:not(.is-visible)');
+    els.forEach(function(el) { fadeObserver.observe(el); });
+    els = doc.querySelectorAll('.animate-stagger:not(.is-visible)');
+    els.forEach(function(el) { staggerObserver.observe(el); });
+    els = doc.querySelectorAll('.animate-count-up:not(.counting):not([data-done])');
+    els.forEach(function(el) { countObserver.observe(el); });
+    els = doc.querySelectorAll('.page-transition-enter:not(.page-transition-enter-active)');
+    els.forEach(function(el) {
+      requestAnimationFrame(function() { el.classList.add('page-transition-enter-active'); });
+    });
+  }
+
+  var fadeObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
       if (entry.isIntersecting) {
         entry.target.classList.add('is-visible');
-        fadeUpObserver.unobserve(entry.target);
+        fadeObserver.unobserve(entry.target);
       }
     });
   }, observerOptions);
 
-  const staggerObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
+  var staggerObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
       if (entry.isIntersecting) {
         entry.target.classList.add('is-visible');
         staggerObserver.unobserve(entry.target);
@@ -36,206 +56,200 @@ SCROLL_ANIMATION_SCRIPT = """
     });
   }, observerOptions);
 
-  // Initialize on DOM ready
-  function initObservers() {
-    document.querySelectorAll('.animate-fade-up').forEach(el => {
-      fadeUpObserver.observe(el);
-    });
-    document.querySelectorAll('.animate-stagger').forEach(el => {
-      staggerObserver.observe(el);
-    });
+  // Count-up : remplit un nombre depuis 0 vers data-target (ease-out cubique).
+  function animateCountUp(element) {
+    element.classList.add('counting');
+    element.dataset.done = '1';
+    var target = parseFloat(element.dataset.target || element.textContent) || 0;
+    var prefix = element.dataset.prefix || '';
+    var suffix = element.dataset.suffix || '';
+    var duration = 1100;
+    var startTime = null;
+    var isDecimal = target % 1 !== 0;
+    var decimals = isDecimal ? ((target.toString().split('.')[1] || '').length) : 0;
+
+    function render(elapsed) {
+      if (startTime === null) startTime = elapsed;
+      var progress = Math.min((elapsed - startTime) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var current = target * eased;
+      element.textContent = prefix + (isDecimal ? current.toFixed(decimals) : Math.round(current)) + suffix;
+      if (progress < 1) { requestAnimationFrame(render); }
+      else { element.dataset.done = '1'; }
+    }
+    requestAnimationFrame(render);
   }
 
-  // Handle Streamlit's dynamic content
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initObservers);
-  } else {
-    initObservers();
-  }
-
-  // Re-observe when Streamlit re-renders
-  const observer = new MutationObserver((mutations) => {
-    let shouldReinit = false;
-    mutations.forEach(mutation => {
-      if (mutation.addedNodes.length > 0) {
-        mutation.addedNodes.forEach(node => {
-          if (node.nodeType === 1) { // Element node
-            if (node.matches?.('.animate-fade-up, .animate-stagger') ||
-                node.querySelector?.('.animate-fade-up, .animate-stagger')) {
-              shouldReinit = true;
-            }
-          }
-        });
+  var countObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        animateCountUp(entry.target);
+        countObserver.unobserve(entry.target);
       }
     });
-    if (shouldReinit) {
-      initObservers();
-    }
-  });
+  }, countOptions);
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-
-  // Parallax effect for images
+  // Parallax léger sur les éléments .parallax-image (throttlé par rAF).
   function handleParallax() {
-    document.querySelectorAll('.parallax-image').forEach(img => {
-      const rect = img.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const distanceFromCenter = rect.top + rect.height / 2 - viewportHeight / 2;
-      const translateY = distanceFromCenter * 0.15; // 15% parallax factor
-      img.style.transform = `translateY(${translateY}px)`;
+    doc.querySelectorAll('.parallax-image').forEach(function(img) {
+      var rect = img.getBoundingClientRect();
+      if (rect.bottom < 0 || rect.top > window.parent.innerHeight) return;
+      var viewportHeight = window.parent.innerHeight;
+      var distanceFromCenter = rect.top + rect.height / 2 - viewportHeight / 2;
+      img.style.transform = 'translateY(' + (distanceFromCenter * 0.12).toFixed(1) + 'px)';
     });
   }
-
-  // Throttled parallax on scroll
-  let ticking = false;
-  window.addEventListener('scroll', () => {
+  var ticking = false;
+  window.parent.addEventListener('scroll', function() {
     if (!ticking) {
-      window.requestAnimationFrame(() => {
-        handleParallax();
-        ticking = false;
-      });
+      window.parent.requestAnimationFrame(function() { handleParallax(); ticking = false; });
       ticking = true;
     }
   }, { passive: true });
 
-  // Count-up animation for numbers
-  function animateCountUp(element) {
-    const target = parseFloat(element.dataset.target || element.textContent);
-    const duration = 1000; // ms
-    const startTime = performance.now();
-    const isDecimal = target % 1 !== 0;
-    const decimals = isDecimal ? (target.toString().split('.')[1]?.length || 0) : 0;
+  // Filet de sécurité : rien ne doit rester invisible si un observateur échoue.
+  window.parent.setTimeout(function() {
+    doc.querySelectorAll('.animate-fade-up, .animate-stagger').forEach(function(el) {
+      el.classList.add('is-visible');
+    });
+    doc.querySelectorAll('.animate-count-up:not(.counting)').forEach(function(el) {
+      animateCountUp(el);
+    });
+  }, 4000);
 
-    function updateCount(currentTime) {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = target * eased;
-      element.textContent = isDecimal ? current.toFixed(decimals) : Math.round(current);
+  // Re-pilotage quand Streamlit re-rend (nouveaux nœuds à chaque rerun).
+  var reinitTimer = null;
+  function scheduleReinit() {
+    if (reinitTimer) window.parent.clearTimeout(reinitTimer);
+    reinitTimer = window.parent.setTimeout(function() { observeAll(); }, 150);
+  }
+  var mutationObserver = new MutationObserver(function(mutations) {
+    var hit = false;
+    mutations.forEach(function(mutation) {
+      mutation.addedNodes.forEach(function(node) {
+        if (node.nodeType === 1) {
+          if (node.matches && node.matches(
+              '.animate-fade-up, .animate-stagger, .animate-count-up, .page-transition-enter, .parallax-image') ||
+              (node.querySelector && node.querySelector(
+              '.animate-fade-up, .animate-stagger, .animate-count-up, .page-transition-enter, .parallax-image'))) {
+            hit = true;
+          }
+        }
+      });
+    });
+    if (hit) scheduleReinit();
+  });
+  mutationObserver.observe(doc.body, { childList: true, subtree: true });
 
-      if (progress < 1) {
-        requestAnimationFrame(updateCount);
-      }
-    }
+  // Transition de sortie douce avant rechargement.
+  window.parent.addEventListener('beforeunload', function() {
+    doc.body.classList.add('page-transition-exit');
+  });
 
-    requestAnimationFrame(updateCount);
+  if (doc.readyState === 'loading') {
+    doc.addEventListener('DOMContentLoaded', function() { observeAll(); handleParallax(); });
+  } else {
+    observeAll();
+    handleParallax();
   }
 
-  const countUpObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        animateCountUp(entry.target);
-        countUpObserver.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.5 });
-
-  document.querySelectorAll('.animate-count-up').forEach(el => {
-    countUpObserver.observe(el);
-  });
-
-  // Page transition handling for multi-step flows
-  window.addEventListener('beforeunload', () => {
-    document.body.classList.add('page-transition-exit');
-    document.body.classList.remove('page-transition-enter-active');
-  });
-
-  // Expose for manual triggering
-  window.TerroirAnimations = {
-    initObservers,
-    animateCountUp,
-    handleParallax
-  };
+  window.TerroirAnimations = { observeAll: observeAll, animateCountUp: animateCountUp, handleParallax: handleParallax };
 })();
 </script>
 """
 
 
 def inject_scroll_animations() -> None:
-    """Inject the scroll animation JavaScript into the page.
-    Call once at the top of your Streamlit app."""
-    html(SCROLL_ANIMATION_SCRIPT, height=0, width=0)
+    """Injecte le JavaScript d'animations dans la page.
+    À appeler une fois après le CSS, en haut de l'application."""
+    if hasattr(st, "iframe"):  # streamlit >= 1.50 (remplace st.components.v1.html)
+        st.iframe(SCROLL_ANIMATION_SCRIPT, height=1)
+    else:
+        html(SCROLL_ANIMATION_SCRIPT, height=0, width=0)
 
 
 def mask_reveal(text: str, delay: int = 0, tag: str = "span") -> str:
-    """Wrap text in masked reveal animation."""
+    """1. Masque animé : le texte apparaît de gauche à droite."""
     delay_class = f" animate-mask-reveal-delay-{delay}" if delay else ""
     return f'<{tag} class="animate-mask-reveal{delay_class}">{text}</{tag}>'
 
 
 def split_line_reveal(lines: list[str], tag: str = "div") -> str:
-    """Wrap lines in split-line reveal animation."""
+    """2. Révélation ligne par ligne (glissent depuis le bas)."""
     inner = "".join(f"<{tag}>{line}</{tag}>" for line in lines)
     return f'<div class="animate-split-line">{inner}</div>'
 
 
 def fade_up(content: str, delay: int = 0, tag: str = "div") -> str:
-    """Wrap content in fade-up on scroll animation."""
+    """3. Apparition en fondu + translation au scroll."""
     delay_class = f" animate-fade-up-delay-{delay}" if delay else ""
     return f'<{tag} class="animate-fade-up{delay_class}">{content}</{tag}>'
 
 
 def stagger_container(items: list[str], tag: str = "div", item_tag: str = "div") -> str:
-    """Wrap items in staggered scroll reveal container."""
+    """4. Révélation échelonnée : chaque enfant apparaît en séquence."""
     inner = "".join(f"<{item_tag}>{item}</{item_tag}>" for item in items)
     return f'<{tag} class="animate-stagger">{inner}</{tag}>'
 
 
 def vertical_mask_reveal(image_url: str, alt: str = "") -> str:
-    """Wrap image in vertical mask reveal."""
+    """5. Masque vertical : l'image se découvre de haut en bas."""
     return f'<div class="animate-vertical-mask"><img src="{image_url}" alt="{alt}" loading="lazy"></div>'
 
 
 def scale_down_reveal(image_url: str, alt: str = "") -> str:
-    """Wrap image in scale-down reveal."""
+    """6. Zoom arrière : l'image passe de 1.15x à 1x en apparaissant."""
     return f'<div class="animate-scale-down"><img src="{image_url}" alt="{alt}" loading="lazy"></div>'
 
 
 def parallax_image(image_url: str, alt: str = "") -> str:
-    """Wrap image in parallax container."""
+    """7. Parallaxe subtile au scroll (translation douce)."""
     return f'<div class="parallax-container"><img class="parallax-image" src="{image_url}" alt="{alt}" loading="lazy"></div>'
 
 
 def zoom_hover_image(image_url: str, alt: str = "") -> str:
-    """Wrap image in zoom-on-hover."""
+    """8. Zoom doux de l'image au survol."""
     return f'<div class="animate-zoom-hover"><img src="{image_url}" alt="{alt}" loading="lazy"></div>'
 
 
 def card_hover(content: str, tag: str = "div") -> str:
-    """Wrap content in card hover micro-interaction."""
+    """9. Micro-interaction au survol : soulèvement + ombre + bordure."""
     return f'<{tag} class="animate-card-hover">{content}</{tag}>'
 
 
 def arrow_slide(label: str, arrow: str = "→", href: str = "#") -> str:
-    """Create arrow slide on hover link."""
-    return f'<a class="animate-arrow-slide animated-underline" href="{href}">{label}<span class="arrow">{arrow}</span></a>'
+    """10. Lien dont la flèche glisse au survol (+ soulignement animé)."""
+    return f'<a class="animate-arrow-slide animated-underline" href="{href}" target="_blank" rel="noopener">{label}<span class="arrow">{arrow}</span></a>'
 
 
 def animated_divider(color: str = "currentColor") -> str:
-    """Create animated horizontal divider."""
-    return f'<div class="animate-divider" style="color: {color};"></div>'
+    """12. Trait horizontal qui se dessine depuis le centre."""
+    return f'<div class="animate-divider" style="color: {color};" aria-hidden="true"></div>'
 
 
 def count_up_number(value: float, decimals: int = 0, prefix: str = "", suffix: str = "") -> str:
-    """Create count-up animated number."""
+    """13. Nombre qui compte de 0 jusqu'à sa valeur quand il entre à l'écran."""
     formatted = f"{value:,.{decimals}f}".replace(",", " ")
-    return f'<span class="animate-count-up" data-target="{value}">{prefix}{formatted}{suffix}</span>'
+    return (
+        f'<span class="animate-count-up" data-target="{value}" data-prefix="{prefix}" '
+        f'data-suffix="{suffix}">{prefix}{formatted}{suffix}</span>'
+    )
 
 
 def page_intro(children: list[str]) -> str:
-    """Wrap children in page-load intro sequence."""
+    """14. Séquence d'introduction au chargement de page (enfants échelonnés)."""
     inner = "".join(children)
     return f'<div class="page-intro">{inner}</div>'
 
 
 def page_transition(content: str, is_entering: bool = True) -> str:
-    """Wrap content in page transition animation."""
-    cls = "page-transition-enter-active" if is_entering else "page-transition-exit-active"
-    return f'<div class="page-transition-enter {cls}">{content}</div>'
+    """15. Transition douce de page (fondu + translation légère).
+
+    Le JS ajoute la classe -active juste après l'insertion pour déclencher le
+    fondu à chaque re-rendu de contenu.
+    """
+    cls = "page-transition-enter" if is_entering else "page-transition-exit-active page-transition-enter"
+    return f'<div class="{cls}">{content}</div>'
 
 
 # Convenience functions for common patterns in the app
@@ -257,14 +271,14 @@ def animate_crop_row(crop_name: str, overlap_days: int, margin: float, status: s
     """Create an animated crop comparison row."""
     status_colors = {"sûr": "var(--sur)", "vigilance": "var(--vigilance)", "rupture": "var(--rupture)"}
     status_color = status_colors.get(status, "var(--encre)")
-    
+
     levers_html = ""
     if levers:
         levers_html = '<div class="levers-preview">'
         for lever in levers[:2]:
             levers_html += f'<span class="lever-tag" style="background: var(--tint-eau); color: var(--eau); padding: 2px 8px; border-radius: 999px; font-size: 11px; margin-right: 4px;">{lever.get("action", "")[:30]}</span>'
         levers_html += '</div>'
-    
+
     return f"""
     <div class="animate-card-hover animate-stagger" style="padding: 1rem; border: 1px solid var(--craie); border-left: 4px solid {status_color}; border-radius: var(--radius); background: var(--card); margin-bottom: 0.5rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
@@ -289,7 +303,7 @@ def animate_timeline_month(month: str, is_critical: bool, weather_icon: str, cro
         color = bar.get("color", "var(--encre)")
         height = bar.get("height", 50)
         bars_html += f'<div class="frise-bar" style="height: {height}%; background: {color}; border-radius: 2px 2px 0 0;"></div>'
-    
+
     return f"""
     <div class="frise-month{critical_class} animate-fade-up" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; min-width: 80px;">
         <div style="font: 500 10px 'IBM Plex Mono', monospace; opacity: 0.6;">{month}</div>
@@ -306,7 +320,7 @@ def animate_spine_segment(name: str, date_str: str, status: str, is_risk: bool =
     status_colors = {"ok": "var(--sur)", "warning": "var(--vigilance)", "error": "var(--rupture)", "unknown": "var(--craie)"}
     dot_color = status_colors.get(status, "var(--craie)")
     risk_class = " risk" if is_risk else ""
-    
+
     return f"""
     <div class="spine-segment{risk_class}" style="--i: {level}; border-bottom: 1px solid var(--craie); padding: 0.5rem 0;">
         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -325,7 +339,7 @@ def animate_confidence_badge(level: str, label: str) -> str:
     """Create an animated confidence badge."""
     colors = {"haute": "var(--sur)", "degradee": "var(--vigilance)", "insuffisante": "var(--rupture)"}
     color = colors.get(level, "var(--encre)")
-    
+
     return f"""
     <span class="animate-mask-reveal" style="
         display: inline-flex;
