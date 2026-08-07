@@ -30,12 +30,16 @@ jobs:
       # Environnement minimal du serveur (gms/requirements.txt), pas requirements.txt
       # racine : c'est exactement ce que construit gms/Dockerfile pour Render, donc
       # ce job vérifie ce qui tourne réellement en production, pas l'environnement dev.
+      # mcp est épinglé <2 : fastmcp 3.x ne supporte pas mcp 2.0 (request_ctx retiré).
       - run: pip install -r gms/requirements.txt
-      - run: pip install "mcp>=2"
 
-      - name: Démarre le serveur GMS + MCP (streamable HTTP) en arrière-plan
+      - name: Démarre le serveur GMS + MCP (streamable HTTP) en arrière-plan, en mode réel
         run: |
-          nohup uvicorn gms.main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
+          # DATAHUB_GMS_URL pointe le serveur MCP sur le GMS lui-même : chaque outil
+          # passe par DataHubClient (SDK + REST) et le contrat HTTP réel du graphe —
+          # la même chaîne que contre un vrai GMS DataHub. Sans cette variable, le
+          # serveur MCP retomberait sur le graphe mémoire (mode démo).
+          DATAHUB_GMS_URL=http://127.0.0.1:8000 nohup uvicorn gms.main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
           for i in $(seq 1 30); do
             curl -sf http://127.0.0.1:8000/health && exit 0
             sleep 1
@@ -47,10 +51,24 @@ jobs:
           count=$(curl -sf http://127.0.0.1:8000/ | python3 -c "import json,sys; print(json.load(sys.stdin)['datasets'])")
           test "$count" = "11" || { echo "attendu 11 datasets, trouvé $count"; exit 1; }
 
+      - name: Vérifie la lecture SDK (GraphQL + OpenAPI v2 batch)
+        run: |
+          DATAHUB_GMS_URL=http://127.0.0.1:8000 python3 - <<'EOF'
+          from datahub.ingestion.graph.client import DatahubClientConfig, DataHubGraph
+          import itertools
+          graph = DataHubGraph(DatahubClientConfig(server="http://127.0.0.1:8000", token=None))
+          urns = list(itertools.islice(graph.get_urns_by_filter(entity_types=["dataset"], query="*"), 20))
+          assert len(urns) == 11, f"attendu 11 urns via GraphQL, trouvé {len(urns)}"
+          props = graph.get_entities_v2("dataset", urns[:2], aspects=["datasetProperties"])
+          assert props and "datasetProperties" in props[urns[0]], "aspect datasetProperties manquant via v2 batch"
+          print(f"SDK OK : {len(urns)} datasets, aspects lus pour {len(props)}")
+          EOF
+
       # Rejoue la démo agent réelle du dépôt contre le serveur qu'on vient de démarrer :
       # même code que celui documenté dans le README et examples/README.md, pas un
       # test ad hoc. Couvre les 8 outils MCP (list/get/lineage/freshness/emit_run/
-      # incident create+resolve/list) en conditions réelles de protocole streamable HTTP.
+      # incident create+resolve/list) en conditions réelles de protocole streamable HTTP
+      # et avec le backend réel (lecture/écriture via DataHubClient).
       - name: Boucle de supervision réelle via MCP (examples/mcp_agent_demo.py)
         run: MCP_URL=http://127.0.0.1:8000/mcp python3 examples/mcp_agent_demo.py
 

@@ -204,6 +204,66 @@ async def incident_get(urn: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Contrat SDK acryl-datahub : GraphQL (get_urns_by_filter) + OpenAPI v2 batch
+# (get_entities_v2). Ces deux endpoints permettent au mode réel du serveur MCP
+# (gms/mcp_server.py, DATAHUB_GMS_URL) de lire ce graphe via le vrai client SDK.
+# ---------------------------------------------------------------------------
+
+def _match_urns(entity_types: list[str] | None, query: str) -> list[str]:
+    types = {t.upper() for t in (entity_types or ["DATASET"])}
+    if types and not types & {"DATASET", "DATASET_PLATFORM"}:
+        return []
+    urns = [urn for urn in _STORE if urn.startswith("urn:li:dataset:")]
+    if query and query != "*":
+        lowered = query.lower()
+        urns = [urn for urn in urns if lowered in short_name(urn).lower()]
+    return urns
+
+
+@app.post("/api/graphql")
+async def graphql(request: Request) -> dict:
+    """Sous-ensemble GraphQL utilisé par le SDK : scrollUrnsWithFilters → scrollAcrossEntities."""
+    body = await request.json()
+    query_text = body.get("query", "")
+    variables = body.get("variables") or {}
+    if "scrollAcrossEntities" not in query_text:
+        return {"data": {}}
+    entity_types = variables.get("types")
+    search_query = variables.get("query", "*")
+    urns = _match_urns(entity_types, search_query)
+    batch_size = variables.get("batchSize") or len(urns)
+    page = urns[:batch_size]
+    return {
+        "data": {
+            "scrollAcrossEntities": {
+                "nextScrollId": None,
+                "searchResults": [{"entity": {"urn": urn}} for urn in page],
+            }
+        }
+    }
+
+
+@app.post("/openapi/v2/entity/batch/{entity_name}")
+async def entity_batch_v2(entity_name: str, request: Request) -> dict:
+    """Batch v2 du SDK : renvoie les aspects demandés pour chaque URN (dataset)."""
+    body = await request.json()
+    urns = body.get("urns") or []
+    aspect_names = body.get("aspectNames") or []
+    entities = []
+    for urn in urns:
+        entity = _STORE.get(urn)
+        if entity is None:
+            continue
+        aspects: dict[str, Any] = {}
+        if not aspect_names or "datasetProperties" in aspect_names:
+            aspects["datasetProperties"] = entity
+        if not aspect_names or "status" in aspect_names:
+            aspects["status"] = {"removed": False}
+        entities.append({"urn": urn, "aspects": aspects})
+    return {"entities": entities}
+
+
 @app.get("/openapi/v3/entity/incident")
 async def incident_list() -> dict:
     return {

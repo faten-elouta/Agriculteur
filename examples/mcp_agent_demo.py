@@ -112,7 +112,8 @@ async def main() -> int:
             print("\nÉTAPE 6 — état final du graphe")
             incidents = parse_json(await call(session, "list_incidents", {}))
             for inc in incidents:
-                print(f"  [{inc['status']}] {inc['urn']} — {inc['title']} (dataset {inc['dataset']})")
+                dataset = inc.get("dataset") or "—"
+                print(f"  [{inc['status']}] {inc['urn']} — {inc['title']} (dataset {dataset})")
 
             print("\nBoucle de supervision terminée : le graphe garde la trace de l'alerte, du run et de la résolution.")
             return 0

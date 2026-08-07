@@ -119,6 +119,23 @@ Le serveur GMS expose le même graphe de contexte via **MCP** (streamable HTTP) 
 Le serveur MCP partage l'état en mémoire du GMS : un incident créé par l'agent
 apparaît dans l'API OpenAPI (`/openapi/v3/entity/incident`) et inversement.
 
+### Mode réel (graphe DataHub, pas le graphe de démonstration)
+
+Si `DATAHUB_GMS_URL` est défini **dans l'environnement du serveur MCP**, chaque
+outil lit et écrit dans un vrai GMS DataHub via `services/datahub_client.py`
+(SDK `acryl-datahub` + REST OpenAPI) au lieu du graphe mémoire : fraîcheur,
+lineage, runs et incidents sont ceux de l'instance DataHub réelle. Le serveur
+MCP devient la passerelle d'agent vers le graphe réel.
+
+```bash
+DATAHUB_GMS_URL=https://votre-instance-datahub.example.com \
+DATAHUB_TOKEN= \
+uvicorn gms.main:app --port 8000        # MCP réel sur /mcp
+```
+
+Sans `DATAHUB_GMS_URL`, le serveur retombe sur le graphe mémoire seedé depuis
+`fixtures/graph.json` (mode démonstration, idéal en développement local).
+
 Une fois connecté :
 
 - l'écran « D'où viennent ces chiffres ? » lit la **fraîcheur réelle des sources

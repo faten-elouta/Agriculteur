@@ -224,6 +224,27 @@ class DataHubClient:
         result = self._request("POST", f"/openapi/v3/entity/incident/{urllib.parse.quote(incident_urn, safe='')}", body)
         return result is not None
 
+    def list_incidents(self) -> list[dict[str, Any]]:
+        """Liste des incidents (actifs et résolus) écrits dans le graphe."""
+        if not self.enabled:
+            return []
+        result = self._request("GET", "/openapi/v3/entity/incident")
+        if not result:
+            return []
+        incidents: list[dict[str, Any]] = []
+        for item in result.get("results") or []:
+            info = (item.get("aspects") or {}).get("incidentInfo") or {}
+            incidents.append(
+                {
+                    "urn": item.get("urn", ""),
+                    "title": info.get("title", ""),
+                    "description": info.get("description", ""),
+                    "status": (info.get("status") or {}).get("state", ""),
+                    "createdAt": info.get("createdAt"),
+                }
+            )
+        return incidents
+
     # ------------------------------------------------------------ commodités
     def freshness_summary(self, dataset_urns: list[str]) -> dict[str, Any]:
         """Résume la fraîcheur locale vs le SLA annoncé, source par source."""
