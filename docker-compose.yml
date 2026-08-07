@@ -1,0 +1,24 @@
+services:
+  gms:
+    build:
+      context: .
+      dockerfile: gms/Dockerfile
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      DATAHUB_GMS_URL: http://gms:8000
+    depends_on:
+      gms:
+        condition: service_healthy
