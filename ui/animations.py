@@ -123,7 +123,7 @@ SCROLL_ANIMATION_SCRIPT = """
   var reinitTimer = null;
   function scheduleReinit() {
     if (reinitTimer) window.parent.clearTimeout(reinitTimer);
-    reinitTimer = window.parent.setTimeout(function() { observeAll(); wireNav(); }, 150);
+    reinitTimer = window.parent.setTimeout(function() { observeAll(); }, 150);
   }
   var mutationObserver = new MutationObserver(function(mutations) {
     var hit = false;
@@ -131,9 +131,9 @@ SCROLL_ANIMATION_SCRIPT = """
       mutation.addedNodes.forEach(function(node) {
         if (node.nodeType === 1) {
           if (node.matches && node.matches(
-              '[data-nav], .animate-fade-up, .animate-stagger, .lineage, .animate-count-up, .page-transition-enter, .parallax-image') ||
+              '.animate-fade-up, .animate-stagger, .lineage, .animate-count-up, .page-transition-enter, .parallax-image') ||
               (node.querySelector && node.querySelector(
-              '[data-nav], .animate-fade-up, .animate-stagger, .lineage, .animate-count-up, .page-transition-enter, .parallax-image'))) {
+              '.animate-fade-up, .animate-stagger, .lineage, .animate-count-up, .page-transition-enter, .parallax-image'))) {
             hit = true;
           }
         }
@@ -143,32 +143,16 @@ SCROLL_ANIMATION_SCRIPT = """
   });
   mutationObserver.observe(doc.body, { childList: true, subtree: true });
 
-  // Navigation par onglets du site vitrine : bascule via l'URL (?view=...).
-  function wireNav() {
-    doc.querySelectorAll('[data-nav]').forEach(function(el) {
-      el.addEventListener('click', function() {
-        var view = el.getAttribute('data-nav');
-        if (!view) return;
-        var url = new URL(window.parent.location.href);
-        if (url.searchParams.get('view') !== view) {
-          url.searchParams.set('view', view);
-          window.parent.location.href = url.toString();
-        }
-      });
-    });
-  }
-
   // Transition de sortie douce avant rechargement.
   window.parent.addEventListener('beforeunload', function() {
     doc.body.classList.add('page-transition-exit');
   });
 
   if (doc.readyState === 'loading') {
-    doc.addEventListener('DOMContentLoaded', function() { observeAll(); handleParallax(); wireNav(); });
+    doc.addEventListener('DOMContentLoaded', function() { observeAll(); handleParallax(); });
   } else {
     observeAll();
     handleParallax();
-    wireNav();
   }
 
   window.TerroirAnimations = { observeAll: observeAll, animateCountUp: animateCountUp, handleParallax: handleParallax };

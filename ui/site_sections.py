@@ -103,7 +103,7 @@ _ECONOMY_SVG = _svg_image("economy", _ECONOMY_SVG)
 # ---------------------------------------------------------------------------
 
 def navbar_html(active: str) -> str:
-    """Barre de navigation (rendue en HTML, onglets cliquables = boutons Streamlit)."""
+    """Barre de navigation (rendue en HTML, onglets = liens natifs ?view=...)."""
     items = [
         ("accueil", "Vision"),
         ("application", "Application"),
@@ -111,7 +111,7 @@ def navbar_html(active: str) -> str:
         ("contact", "Contact"),
     ]
     dots = "".join(
-        f'<span class="site-nav-item{" active" if key == active else ""}" data-nav="{key}">{label}</span>'
+        f'<a class="site-nav-item{" active" if key == active else ""}" href="?view={key}">{label}</a>'
         for key, label in items
     )
     return (
@@ -143,8 +143,8 @@ def hero_html() -> str:
         "à partir de données ouvertes tracées : sol, eau, climat, marchés. Chaque chiffre est relié "
         "à sa source, contrôlé par un agent de supervision, et barré s'il devient périmé.</p>"
         '<div class="site-hero-cta">'
-        '<span class="site-btn site-btn-primary" data-nav="application">Lancer l\'application</span>'
-        '<span class="site-btn site-btn-ghost" data-nav="donnees">Voir le graphe & l\'IA</span>'
+        '<a class="site-btn site-btn-primary" href="?view=application">Lancer l\'application</a>'
+        '<a class="site-btn site-btn-ghost" href="?view=donnees">Voir le graphe & l\'IA</a>'
         "</div>"
         '<div class="site-hero-chips">'
         '<span class="site-chip"><i class="chip-dot sur"></i>11 sources de données</span>'
@@ -255,7 +255,7 @@ def expertise_html() -> str:
         f'<div class="site-expertise-media">{media}</div>'
         '<div class="site-expertise-body">'
         f"<h3>{name}</h3><p>{text}</p>"
-        f'<span class="site-expertise-link" data-nav="{nav}">Explorer <b>→</b></span>'
+        f'<a class="site-expertise-link" href="?view={nav}">Explorer <b>→</b></a>'
         "</div></article>"
         for name, text, media, nav in cards
     )
@@ -299,7 +299,7 @@ def cta_html() -> str:
         "<h2>Prêt à comparer vos cultures sur votre parcelle ?</h2>"
         "<p>Entrez votre commune, chargez les parcelles réelles du RPG et recevez une comparaison sourcée, "
         "avec le certificat de données et les KPIs de confiance.</p>"
-        '<span class="site-btn site-btn-primary site-btn-lg" data-nav="application">Lancer l\'application →</span>'
+        '<a class="site-btn site-btn-primary site-btn-lg" href="?view=application">Lancer l\'application →</a>'
         "</div>"
         "</section>"
     )
@@ -330,10 +330,10 @@ def footer_html() -> str:
         "</div>"
         '<div class="site-footer-col">'
         "<h4>Liens utiles</h4>"
-        '<span class="site-foot-link" data-nav="accueil">Vision</span>'
-        '<span class="site-foot-link" data-nav="application">Application</span>'
-        '<span class="site-foot-link" data-nav="donnees">Graphe &amp; IA</span>'
-        '<span class="site-foot-link" data-nav="contact">Contact</span>'
+        '<a class="site-foot-link" href="?view=accueil">Vision</a>'
+        '<a class="site-foot-link" href="?view=application">Application</a>'
+        '<a class="site-foot-link" href="?view=donnees">Graphe &amp; IA</a>'
+        '<a class="site-foot-link" href="?view=contact">Contact</a>'
         "</div>"
         "</div>"
         '<div class="site-footer-legal">© 2026 Terroir Context Agents — Apache 2.0 · données : Licence Ouverte / Etalab 2.0 · '

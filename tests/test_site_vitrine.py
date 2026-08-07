@@ -26,19 +26,19 @@ def test_navbar_has_four_tabs_and_active_state():
     out = navbar_html("application")
     for label in ("Vision", "Application", "Graphe & IA", "Contact"):
         assert label in out
-    assert 'data-nav="accueil"' in out
-    assert 'data-nav="application"' in out
-    assert 'data-nav="donnees"' in out
-    assert 'data-nav="contact"' in out
-    assert 'class="site-nav-item active" data-nav="application"' in out
+    assert 'href="?view=accueil"' in out
+    assert 'href="?view=application"' in out
+    assert 'href="?view=donnees"' in out
+    assert 'href="?view=contact"' in out
+    assert 'class="site-nav-item active" href="?view=application"' in out
     assert "Terroir" in out
 
 
 def test_hero_has_title_cta_and_images():
     out = hero_html()
     assert "Choisir sa culture" in out
-    assert 'data-nav="application"' in out
-    assert 'data-nav="donnees"' in out
+    assert 'href="?view=application"' in out
+    assert 'href="?view=donnees"' in out
     assert "data:image/jpeg;base64," in out
     assert "site-collage-main" in out
     assert "site-collage-card" in out
@@ -88,7 +88,7 @@ def test_approach_has_three_steps():
 def test_cta_points_to_application():
     out = cta_html()
     assert "Lancer l'application" in out
-    assert 'data-nav="application"' in out
+    assert 'href="?view=application"' in out
 
 
 def test_footer_has_columns_and_legal():
