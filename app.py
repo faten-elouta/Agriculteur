@@ -37,6 +37,7 @@ from ui.assolement import (
     tunnel_header_html,
 )
 from ui.calendar_svg import calendar_svg
+from ui.kpis import kpis_html
 from ui.lineage_graph import lineage_html
 from ui.parcel_map import render_parcel_map
 from ui.provenance_spine import render_spine
@@ -411,6 +412,7 @@ def render_answer_screen(result: dict) -> None:
         ),
         unsafe_allow_html=True,
     )
+    st.markdown(anim.fade_up(kpis_html(graph, result, get_datahub_client()), delay=1), unsafe_allow_html=True)
     if not result["cultures"]:
         st.info("Aucune culture ne peut être chiffrée avec ce niveau de confiance.")
         return
@@ -561,6 +563,7 @@ def render_provenance_screen(result: dict, graph: dict) -> None:
         unsafe_allow_html=True,
     )
     st.markdown(datahub_banner_html(graph), unsafe_allow_html=True)
+    st.markdown(anim.fade_up(kpis_html(graph, result, get_datahub_client())), unsafe_allow_html=True)
     render_supervision_console(get_datahub_client(), graph)
     st.markdown('<div class="assolement-spine-full">', unsafe_allow_html=True)
     st.markdown(render_spine(graph, set(st.session_state.get("impacted", []))), unsafe_allow_html=True)

@@ -231,6 +231,26 @@ calculées (aucune source externe ajoutée) :
 Tous les modules vivent dans `ui/` (`lineage_graph.py`, `supervision_console.py`,
 `parcel_map.py`, `water_chart.py`) et sont couverts par des tests.
 
+## KPIs : Confiance, Produit, IA
+
+Un tableau de bord de 18 indicateurs (3 familles × 6), calculés uniquement à
+partir des données déjà produites par l'application — aucun chiffre inventé :
+
+- **Confiance** — conformité SLA des sources (à jour / périmées / inconnues),
+  part de sources en mesure directe, garanties élevées du certificat,
+  fiabilité annoncée de la prévision, cultures au verdict sûr, traçabilité.
+- **Produit** — cultures comparées, écart de marge (€/ha), besoin en eau
+  cumulé (mm), jours de tension moyens, origine de la parcelle, étapes du
+  parcours décisionnel.
+- **IA & Agents** — score technique expert (/100), outils MCP exposés (12),
+  skills chargés, incidents ouverts dans le graphe, modèle GR4J et version,
+  runs tracés par exécution.
+
+En mode connecté (`DATAHUB_GMS_URL`), les valeurs de graphe (fraîcheur,
+skills, incidents) sont lues dans DataHub ; sinon le calcul local reproduit
+les mêmes formules et la légende du tableau de bord le précise. Source :
+`services/kpi_service.py` + `ui/kpis.py`.
+
 ## Limites, licences et sources
 
 Les modèles sont volontairement simplifiés : normales thermiques sinusoïdales,
