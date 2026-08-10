@@ -14,6 +14,7 @@ CSS = r"""
   --sky-top:#4A90D9; --sky-mid:#8FB8D8; --sky-bottom:#FFD37A; --grass:#3F7A5A; --grass-dark:#2E5940;
 }
 html, body, [class*="st-"] { font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif; color:var(--encre); line-height:1.45; }
+[data-testid="stIconMaterial"] { font-family: "Material Symbols Rounded" !important; }
 .stMain, .stMainBlockContainer, .report-section, .report-subhead { overflow-anchor:none; }
 .stApp { background:
   radial-gradient(1100px 480px at 85% -8%, rgba(43,108,143,.07), transparent 60%),

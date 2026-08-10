@@ -41,6 +41,12 @@ MSG: dict[str, dict[str, str]] = {
     "stats.steps": {MS: "étapes du parcours décisionnel", M: "steps of the decision journey"},
     "stats.mcp": {MS: "outils MCP pour un agent", M: "MCP tools for an agent"},
 
+    # --- Landing : onglets de la page d'accueil ---------------------------------
+    "lp.tab.mission": {MS: "Notre mission", M: "Our mission"},
+    "lp.tab.values": {MS: "Nos valeurs", M: "Our values"},
+    "lp.tab.expertise": {MS: "Nos expertises", M: "Our expertise"},
+    "lp.tab.approach": {MS: "Notre approche", M: "Our approach"},
+
     # --- Landing : à propos ----------------------------------------------------
     "about.eyebrow": {MS: "NOTRE MISSION", M: "OUR MISSION"},
     "about.title": {MS: "Un conseil fondé sur les données, pas sur l'intuition", M: "Advice grounded in data, not intuition"},
