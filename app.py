@@ -50,7 +50,6 @@ from ui.water_chart import render_water_chart
 from ui.site_sections import (
     approach_html,
     about_html,
-    cta_html,
     expertise_html,
     footer_html,
     hero_html,
@@ -689,7 +688,6 @@ def render_datahub_view(graph: dict, culture_specs: list[dict], lang: str = MS) 
         )
         st.markdown(lineage_html(graph, impacted_urns=set(st.session_state.get("impacted", [])), lang=lang), unsafe_allow_html=True)
 
-    st.markdown(cta_html(lang), unsafe_allow_html=True)
     st.markdown(footer_html(lang), unsafe_allow_html=True)
 
 
@@ -750,7 +748,6 @@ if view == "accueil":
         st.markdown(expertise_html(lg), unsafe_allow_html=True)
     with story_tabs[3]:
         st.markdown(approach_html(lg), unsafe_allow_html=True)
-    st.markdown(cta_html(lg), unsafe_allow_html=True)
     st.markdown(footer_html(lg), unsafe_allow_html=True)
     st.stop()
 
