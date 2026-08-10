@@ -919,6 +919,31 @@ button[kind="primary"]:hover p, [data-testid="stBaseButton-primary"]:hover p { c
 .site-nav-item:hover { background: var(--tint-eau); color: var(--eau); opacity: 1; }
 .site-nav-item.active { background: var(--encre); color: var(--papier); opacity: 1; }
 
+/* Sélecteur de langue FR/EN — bien visible, à droite de la navbar */
+.site-nav-lang {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(28, 38, 32, .22);
+  border-radius: 999px;
+  background: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(28, 38, 32, .06);
+}
+.site-lang-link {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  padding: .32rem .8rem;
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--encre);
+  opacity: .7;
+  transition: background .15s ease, color .15s ease, opacity .15s ease;
+}
+.site-lang-link:hover { opacity: 1; }
+.site-lang-link.active { background: var(--eau); color: #FFFFFF; opacity: 1; }
+
 /* Hero */
 .site-hero { padding: 2.2rem 0 1.6rem; }
 .site-hero-inner {
