@@ -10,6 +10,12 @@
 
 Terroir Context Agents
 
+## Elevator pitch (≤140 characters)
+
+"Which crop will still have water at its critical stage? Terroir Context Agents
+answers before sowing — every number traced in DataHub." (136 chars — paste as
+is into the Elevator pitch field.)
+
 ## Tagline
 
 Un agriculteur ne peut semer qu'une fois par an. On lui montre, avant de semer,
@@ -24,7 +30,9 @@ des preuves tracées dans DataHub, pas des intuitions.
   - Connector: `hubeau` ingestion source — [ PR link once opened: https://github.com/faten-elouta/datahub/pull/new/feat/hubeau-source ]
   - Skill: `environmental-data-provenance` freshness/SLA monitoring — https://github.com/datahub-project/datahub/pull/18967
   - Docs: testing tip for `adding-source.md` — [ PR link once opened: https://github.com/faten-elouta/datahub/pull/new/docs/adding-source-testing-tip ]
-- **Demo video:** [ add once recorded, <3 min, public on YouTube/Vimeo ]
+- **Demo video (1 min):** `docs/video/terroir-context-agents.mp4` — to upload
+  as unlisted on YouTube/Vimeo and paste the share link here before submitting.
+- **Video thumbnail (3:2):** `docs/video/thumbnail.png`
 
 ---
 
