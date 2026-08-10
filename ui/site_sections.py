@@ -19,6 +19,8 @@ import html
 from pathlib import Path
 from typing import Any
 
+from ui.i18n import MS, t
+
 ROOT = Path(__file__).resolve().parent.parent
 WEB_IMAGES = {
     "mais": ROOT / "assets" / "cultures" / "web" / "mais.jpg",
@@ -102,17 +104,24 @@ _ECONOMY_SVG = _svg_image("economy", _ECONOMY_SVG)
 # Sections du site
 # ---------------------------------------------------------------------------
 
-def navbar_html(active: str) -> str:
+def navbar_html(active: str, lang: str = MS) -> str:
     """Barre de navigation (rendue en HTML, onglets = liens natifs ?view=...)."""
     items = [
-        ("accueil", "Vision"),
-        ("application", "Application"),
-        ("donnees", "Graphe & IA"),
-        ("contact", "Contact"),
+        ("accueil", t(lang, "nav.vision")),
+        ("application", t(lang, "nav.application")),
+        ("donnees", t(lang, "nav.graph")),
+        ("contact", t(lang, "nav.contact")),
     ]
     dots = "".join(
-        f'<a class="site-nav-item{" active" if key == active else ""}" href="?view={key}">{label}</a>'
+        f'<a class="site-nav-item{" active" if key == active else ""}" href="?view={key}&lang={lang}">{label}</a>'
         for key, label in items
+    )
+    lang_switch = (
+        '<div class="site-nav-lang">'
+        f'<a class="site-lang-link{" active" if lang == "fr" else ""}" href="?view={active}&lang=fr">FR</a>'
+        '<span class="site-lang-sep">·</span>'
+        f'<a class="site-lang-link{" active" if lang == "en" else ""}" href="?view={active}&lang=en">EN</a>'
+        "</div>"
     )
     return (
         '<div class="site-navbar">'
@@ -126,30 +135,29 @@ def navbar_html(active: str) -> str:
         '<span class="site-brand-name">Terroir<em>Context</em>Agents</span>'
         "</div>"
         f'<nav class="site-nav-dots">{dots}</nav>'
+        f"{lang_switch}"
         "</div>"
         "</div>"
     )
 
 
-def hero_html() -> str:
+def hero_html(lang: str = MS) -> str:
     """Hero titré + collage de trois images de cultures."""
     return (
         '<section class="site-hero" id="hero">'
         '<div class="site-hero-inner">'
         '<div class="site-hero-text">'
-        '<div class="site-eyebrow">DÉCISION AGRICOLE SOURCÉE — DATAHUB, MCP & IA</div>'
-        '<h1 class="site-hero-title">Choisir sa culture avec des <em>preuves</em>, pas des intuitions</h1>'
-        '<p class="site-hero-lead">Terroir Context Agents compare les cultures d\'une parcelle réelle '
-        "à partir de données ouvertes tracées : sol, eau, climat, marchés. Chaque chiffre est relié "
-        "à sa source, contrôlé par un agent de supervision, et barré s'il devient périmé.</p>"
+        f'<div class="site-eyebrow">{t(lang, "hero.eyebrow")}</div>'
+        f'<h1 class="site-hero-title">{t(lang, "hero.title")}</h1>'
+        f'<p class="site-hero-lead">{t(lang, "hero.lead")}</p>'
         '<div class="site-hero-cta">'
-        '<a class="site-btn site-btn-primary" href="?view=application">Analyser ma parcelle</a>'
-        '<a class="site-btn site-btn-ghost" href="?view=donnees">Voir le graphe & l\'IA</a>'
+        f'<a class="site-btn site-btn-primary" href="?view=application&lang={lang}">{t(lang, "hero.cta.analyze")}</a>'
+        f'<a class="site-btn site-btn-ghost" href="?view=donnees&lang={lang}">{t(lang, "hero.cta.graph")}</a>'
         "</div>"
         '<div class="site-hero-chips">'
-        '<span class="site-chip"><i class="chip-dot sur"></i>11 sources de données</span>'
-        '<span class="site-chip"><i class="chip-dot eau"></i>3 cultures comparées</span>'
-        '<span class="site-chip"><i class="chip-dot vigilance"></i>12 outils MCP</span>'
+        f'<span class="site-chip"><i class="chip-dot sur"></i>{t(lang, "hero.chip.sources")}</span>'
+        f'<span class="site-chip"><i class="chip-dot eau"></i>{t(lang, "hero.chip.crops")}</span>'
+        f'<span class="site-chip"><i class="chip-dot vigilance"></i>{t(lang, "hero.chip.mcp")}</span>'
         "</div>"
         "</div>"
         '<div class="site-hero-visual">'
@@ -163,13 +171,13 @@ def hero_html() -> str:
     )
 
 
-def stats_band_html() -> str:
+def stats_band_html(lang: str = MS) -> str:
     """Bande de chiffres clés (compteurs animés)."""
     stats = [
-        ("11", "", "sources de données tracées", "sur"),
-        ("3", "", "cultures comparées par parcelle", "eau"),
-        ("7", "", "étapes du parcours décisionnel", "vigilance"),
-        ("12", "", "outils MCP pour un agent", "eau"),
+        ("11", "", t(lang, "stats.sources"), "sur"),
+        ("3", "", t(lang, "stats.crops"), "eau"),
+        ("7", "", t(lang, "stats.steps"), "vigilance"),
+        ("12", "", t(lang, "stats.mcp"), "eau"),
     ]
     cells = "".join(
         f'<div class="site-stat {tone}">'
@@ -181,29 +189,24 @@ def stats_band_html() -> str:
     return f'<section class="site-stats">{cells}</section>'
 
 
-def about_html() -> str:
+def about_html(lang: str = MS) -> str:
     """À propos : image + texte + liste à coches, comme la section « Un conseil humain »."""
     return (
         '<section class="site-section" id="apropos">'
         '<div class="site-section-grid two">'
         '<div class="site-figure">'
         f'<div class="site-figure-frame">{_PARCEL_SVG}</div>'
-        '<div class="site-figure-caption">parcelle RPG réelle · géométrie WGS84 · sol SoilGrids</div>'
+        f'<div class="site-figure-caption">{t(lang, "about.caption")}</div>'
         "</div>"
         '<div class="site-section-text">'
-        '<div class="site-eyebrow">NOTRE MISSION</div>'
-        "<h2>Un conseil fondé sur les données, pas sur l'intuition</h2>"
-        "<p>Comme un cabinet accompagne un dirigeant, Terroir Context Agents accompagne "
-        "l'agriculteur dans son choix de culture : chaque recommandation s'appuie sur des "
-        "données publiques vérifiées (RPG, Hub'Eau, SoilGrids, prévisions saisonnières) "
-        "assemblées dans un graphe de contexte DataHub.</p>"
-        "<p>Un agent MCP supervise en continu la fraîcheur des sources : si une station ne "
-        "répond plus, les recommandations devenues fragiles sont barrées et un incident est "
-        "ouvert dans le graphe. La décision reste humaine — les preuves, elles, sont auditées.</p>"
+        f'<div class="site-eyebrow">{t(lang, "about.eyebrow")}</div>'
+        f"<h2>{t(lang, 'about.title')}</h2>"
+        f"<p>{t(lang, 'about.p1')}</p>"
+        f"<p>{t(lang, 'about.p2')}</p>"
         '<ul class="site-checklist">'
-        '<li><i>✓</i>Traçabilité complète de la source jusqu\'au chiffre</li>'
-        '<li><i>✓</i>Fraîcheur contrôlée par SLA, périmés signalés</li>'
-        '<li><i>✓</i>Chiffres déterministes, aucun généré par un LLM</li>'
+        f"<li><i>✓</i>{t(lang, 'about.check1')}</li>"
+        f"<li><i>✓</i>{t(lang, 'about.check2')}</li>"
+        f"<li><i>✓</i>{t(lang, 'about.check3')}</li>"
         "</ul>"
         "</div>"
         "</div>"
@@ -211,15 +214,12 @@ def about_html() -> str:
     )
 
 
-def values_html() -> str:
+def values_html(lang: str = MS) -> str:
     """Trois valeurs en cartes à cocher, comme Humain / Efficience / Adaptabilité."""
     values = [
-        ("Transparence", "Chaque chiffre est relié à sa source, sa licence et son niveau de preuve dans le graphe.",
-         "transparence"),
-        ("Autonomie", "L'agent de supervision contrôle la fraîcheur et l'impact du lineage sans intervention humaine.",
-         "autonomie"),
-        ("Fiabilité", "Les formules sont déterministes et documentées ; le certificat de données dit ce qui est prouvé.",
-         "fiabilite"),
+        (t(lang, "values.transparence"), t(lang, "values.transparence.text"), "transparence"),
+        (t(lang, "values.autonomie"), t(lang, "values.autonomie.text"), "autonomie"),
+        (t(lang, "values.fiabilite"), t(lang, "values.fiabilite.text"), "fiabilite"),
     ]
     cards = "".join(
         '<div class="site-value-card">'
@@ -233,47 +233,44 @@ def values_html() -> str:
     )
     return (
         '<section class="site-section">'
-        '<div class="site-kicker-row"><span class="site-eyebrow">NOS VALEURS</span>'
-        "<h2>Trois engagements pour chaque décision</h2></div>"
+        '<div class="site-kicker-row"><span class="site-eyebrow">' + t(lang, "values.eyebrow") + "</span>"
+        f"<h2>{t(lang, 'values.title')}</h2></div>"
         f'<div class="site-value-grid">{cards}</div>'
         "</section>"
     )
 
 
-def expertise_html() -> str:
+def expertise_html(lang: str = MS) -> str:
     """Trois cartes d'expertise illustrées, comme Restructuration / Transaction / Stratégie."""
     cards = [
-        ("Parcelle & sol", "Le RPG public, la géométrie réelle des parcelles et le sol (SoilGrids ou analyse déclarée).",
-         _PARCEL_SVG, "donnees"),
-        ("Eau & climat", "Les stations Hub'Eau en service, la réserve utile, la fenêtre de tension et les prévisions.",
-         _WATER_SVG, "application"),
-        ("Économie & marchés", "Prix, charges et aides à remplacer par les valeurs de l'exploitation, marge recalculée.",
-         _ECONOMY_SVG, "application"),
+        (t(lang, "expertise.card1.title"), t(lang, "expertise.card1.text"), _PARCEL_SVG, "donnees"),
+        (t(lang, "expertise.card2.title"), t(lang, "expertise.card2.text"), _WATER_SVG, "application"),
+        (t(lang, "expertise.card3.title"), t(lang, "expertise.card3.text"), _ECONOMY_SVG, "application"),
     ]
     items = "".join(
         '<article class="site-expertise-card">'
         f'<div class="site-expertise-media">{media}</div>'
         '<div class="site-expertise-body">'
         f"<h3>{name}</h3><p>{text}</p>"
-        f'<a class="site-expertise-link" href="?view={nav}">Explorer <b>→</b></a>'
+        f'<a class="site-expertise-link" href="?view={nav}&lang={lang}">{t(lang, "expertise.explore")} <b>→</b></a>'
         "</div></article>"
         for name, text, media, nav in cards
     )
     return (
         '<section class="site-section" id="expertise">'
-        '<div class="site-kicker-row"><span class="site-eyebrow">NOS DOMAINES D\'EXPERTISE</span>'
-        "<h2>Trois piliers de données, un seul graphe</h2></div>"
+        '<div class="site-kicker-row"><span class="site-eyebrow">' + t(lang, "expertise.eyebrow") + "</span>"
+        f"<h2>{t(lang, 'expertise.title')}</h2></div>"
         f'<div class="site-expertise-grid">{items}</div>'
         "</section>"
     )
 
 
-def approach_html() -> str:
+def approach_html(lang: str = MS) -> str:
     """Approche numérotée, comme « Notre approche » du site de référence."""
     steps = [
-        ("Une expertise pointue", "Maîtrise des rouages de la donnée agricole : chaque source est qualifiée par son niveau de preuve (mesure, modélisation, dire d'expert)."),
-        ("Une approche orientée résultats", "Les recommandations sont directement applicables : calendrier, eau, marge — avec un impact mesurable sur la décision de semis."),
-        ("Un accompagnement immersif", "L'agent de supervision travaille dans votre graphe DataHub : fraîcheur, lineage, incidents et runs y sont tracés en continu."),
+        (t(lang, "approach.step1.title"), t(lang, "approach.step1.text")),
+        (t(lang, "approach.step2.title"), t(lang, "approach.step2.text")),
+        (t(lang, "approach.step3.title"), t(lang, "approach.step3.text")),
     ]
     items = "".join(
         '<div class="site-step">'
@@ -284,34 +281,32 @@ def approach_html() -> str:
     )
     return (
         '<section class="site-section" id="approche">'
-        '<div class="site-kicker-row"><span class="site-eyebrow">NOTRE APPROCHE</span>'
-        "<h2>Une méthode différenciante, techniquement documentée</h2></div>"
+        '<div class="site-kicker-row"><span class="site-eyebrow">' + t(lang, "approach.eyebrow") + "</span>"
+        f"<h2>{t(lang, 'approach.title')}</h2></div>"
         f'<div class="site-steps">{items}</div>'
         "</section>"
     )
 
 
-def app_hero_html() -> str:
+def app_hero_html(lang: str = MS) -> str:
     """Hero de la vue Application : mêmes codes visuels que l'accueil, sans collage."""
     return (
         '<section class="site-hero site-hero-app" id="application">'
         '<div class="site-hero-inner">'
         '<div class="site-hero-text">'
-        '<div class="site-eyebrow">L\'APPLICATION — LE TUNNEL DE DÉCISION</div>'
-        '<h1 class="site-hero-title">Choisir sa culture avec des <em>preuves</em>, pas des intuitions</h1>'
-        '<p class="site-hero-lead">Saisissez votre commune, chargez les parcelles réelles du RPG et recevez '
-        "une comparaison sourcée des trois cultures : calendrier, eau, marge, confiance. Chaque chiffre est "
-        "tracé jusqu'à sa source dans le graphe DataHub.</p>"
+        f'<div class="site-eyebrow">{t(lang, "apphero.eyebrow")}</div>'
+        f'<h1 class="site-hero-title">{t(lang, "hero.title")}</h1>'
+        f'<p class="site-hero-lead">{t(lang, "apphero.lead")}</p>'
         '<div class="site-hero-chips">'
-        '<span class="site-chip"><i class="chip-dot sur"></i>parcelles RPG réelles</span>'
-        '<span class="site-chip"><i class="chip-dot eau"></i>3 cultures comparées</span>'
-        '<span class="site-chip"><i class="chip-dot vigilance"></i>certificat de données</span>'
+        f'<span class="site-chip"><i class="chip-dot sur"></i>{t(lang, "apphero.chip.parcels")}</span>'
+        f'<span class="site-chip"><i class="chip-dot eau"></i>{t(lang, "apphero.chip.crops")}</span>'
+        f'<span class="site-chip"><i class="chip-dot vigilance"></i>{t(lang, "apphero.chip.certificate")}</span>'
         "</div>"
         "</div>"
         '<div class="site-hero-visual">'
         '<div class="site-hero-card">'
         f'{_PARCEL_SVG}'
-        "<p>Parcelle RPG réelle, commune saisie, sources de secours essayées dans l'ordre.</p>"
+        f"<p>{t(lang, 'apphero.card')}</p>"
         "</div>"
         "</div>"
         "</div>"
@@ -331,21 +326,20 @@ def section_header_html(kicker: str, title: str, lead: str = "") -> str:
     )
 
 
-def cta_html() -> str:
+def cta_html(lang: str = MS) -> str:
     """Bandeau d'appel à l'action."""
     return (
         '<section class="site-cta">'
         '<div class="site-cta-inner">'
-        "<h2>Prêt à comparer vos cultures sur votre parcelle ?</h2>"
-        "<p>Entrez votre commune, chargez les parcelles réelles du RPG et recevez une comparaison sourcée, "
-        "avec le certificat de données et les KPIs de confiance.</p>"
-        '<a class="site-btn site-btn-primary site-btn-lg" href="?view=application">Analyser ma parcelle →</a>'
+        f"<h2>{t(lang, 'cta.title')}</h2>"
+        f"<p>{t(lang, 'cta.text')}</p>"
+        f'<a class="site-btn site-btn-primary site-btn-lg" href="?view=application&lang={lang}">{t(lang, "cta.btn")}</a>'
         "</div>"
         "</section>"
     )
 
 
-def footer_html() -> str:
+def footer_html(lang: str = MS) -> str:
     """Pied de page en trois colonnes, comme le site de référence."""
     return (
         '<footer class="site-footer">'
@@ -358,41 +352,39 @@ def footer_html() -> str:
         "</svg>"
         '<span class="site-brand-name">Terroir<em>Context</em>Agents</span>'
         "</div>"
-        "<p>Partenaire de la décision agricole : données ouvertes, graphe DataHub et agent MCP "
-        "de supervision. Projet du hackathon Build with DataHub.</p>"
+        f"<p>{t(lang, 'footer.tagline')}</p>"
         "</div>"
         '<div class="site-footer-col">'
-        "<h4>Contact</h4>"
+        f"<h4>{t(lang, 'footer.contact_title')}</h4>"
         "<p>Hackathon Devpost — Build with DataHub: The Agent Hackathon<br/>"
         '<a href="https://github.com/faten-elouta/Agriculteur">github.com/faten-elouta/Agriculteur</a></p>'
-        '<p class="site-live"><i></i>Application en ligne : '
+        f'<p class="site-live"><i></i>{t(lang, "footer.online")} : '
         '<a href="https://terroir-context-agents.vercel.app">terroir-context-agents.vercel.app</a></p>'
         "</div>"
         '<div class="site-footer-col">'
-        "<h4>Liens utiles</h4>"
-        '<a class="site-foot-link" href="?view=accueil">Vision</a>'
-        '<a class="site-foot-link" href="?view=application">Application</a>'
-        '<a class="site-foot-link" href="?view=donnees">Graphe &amp; IA</a>'
-        '<a class="site-foot-link" href="?view=contact">Contact</a>'
+        f"<h4>{t(lang, 'footer.links_title')}</h4>"
+        f'<a class="site-foot-link" href="?view=accueil&lang={lang}">{t(lang, "nav.vision")}</a>'
+        f'<a class="site-foot-link" href="?view=application&lang={lang}">{t(lang, "nav.application")}</a>'
+        f'<a class="site-foot-link" href="?view=donnees&lang={lang}">{t(lang, "nav.graph")}</a>'
+        f'<a class="site-foot-link" href="?view=contact&lang={lang}">{t(lang, "nav.contact")}</a>'
         "</div>"
         "</div>"
-        '<div class="site-footer-legal">© 2026 Terroir Context Agents — Apache 2.0 · données : Licence Ouverte / Etalab 2.0 · '
-        'format inspiré de consilium-bsf.fr/vision</div>'
+        f'<div class="site-footer-legal">{t(lang, "footer.legal")}</div>'
         "</footer>"
     )
 
 
-def render_landing_html() -> str:
+def render_landing_html(lang: str = MS) -> str:
     """La page Vision complète (sans la navbar, gérée par l'application)."""
     return "".join(
         [
-            hero_html(),
-            stats_band_html(),
-            about_html(),
-            values_html(),
-            expertise_html(),
-            approach_html(),
-            cta_html(),
-            footer_html(),
+            hero_html(lang),
+            stats_band_html(lang),
+            about_html(lang),
+            values_html(lang),
+            expertise_html(lang),
+            approach_html(lang),
+            cta_html(lang),
+            footer_html(lang),
         ]
     )

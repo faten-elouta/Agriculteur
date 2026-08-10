@@ -8,6 +8,7 @@ vérifier la découverte, la détection d'anomalies et le lineage cross-platefor
 
 from __future__ import annotations
 
+from datetime import date
 from unittest.mock import MagicMock
 
 from services.datahub_client import DataHubClient
@@ -18,7 +19,7 @@ STALE_URN = "urn:li:dataset:(urn:li:dataPlatform:postgres,public.trips_stale,PRO
 
 DATASET_ASPECTS = {
     FRESH_URN: {
-        "datasetProperties": {"name": "trips_fresh", "customProperties": {"last_updated": "2026-08-06", "freshness_sla_days": "1"}},
+        "datasetProperties": {"name": "trips_fresh", "customProperties": {"last_updated": date.today().isoformat(), "freshness_sla_days": "1"}},
         "schemaMetadata": {"fields": [{"fieldPath": "id"}]},
         "status": {"removed": False},
         "upstreamLineage": {"upstreams": [{"dataset": "urn:li:dataset:(urn:li:dataPlatform:postgres,public.raw,PROD)"}]},

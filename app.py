@@ -26,14 +26,11 @@ from services.recommendation_service import build_recommendation, recompute_marg
 from services.report_service import build_comparison_report, report_to_csv, save_report
 from services.simulation_service import simulate_station_failure
 from ui.assolement import (
-    INTRO_SLIDES,
-    analysis_article,
     comparator_html,
-    crop_reason_line,
+    front_page_html,
     intro_slide_html,
+    intro_slides,
     levers_panel,
-    no_risk_panel_html,
-    ranking_table_html,
     render_timeline,
     screen_kicker_html,
     simulation_recap_html,
@@ -316,10 +313,10 @@ def render_question_screen(graph: dict, culture_specs: list[dict]) -> None:
     nav_prev, nav_body, nav_next = st.columns([0.12, 0.76, 0.12], vertical_alignment="center")
     with nav_prev:
         if st.button("‹", key="intro_prev", width="stretch"):
-            st.session_state.intro_slide = (st.session_state.intro_slide - 1) % len(INTRO_SLIDES)
+            st.session_state.intro_slide = (st.session_state.intro_slide - 1) % len(intro_slides())
     with nav_next:
         if st.button("›", key="intro_next", width="stretch"):
-            st.session_state.intro_slide = (st.session_state.intro_slide + 1) % len(INTRO_SLIDES)
+            st.session_state.intro_slide = (st.session_state.intro_slide + 1) % len(intro_slides())
     with nav_body:
         st.markdown(intro_slide_html(st.session_state.intro_slide), unsafe_allow_html=True)
 
@@ -481,7 +478,9 @@ def render_result_screen(result: dict, graph: dict) -> None:
         st.info("Aucune culture ne peut être chiffrée avec ce niveau de confiance.")
         return
 
-    # --- Niveau 1 : décision ------------------------------------------------
+    # --- Niveau 1 : décision, en une seule page façon « une » de journal ----
+    # Titraille + chapô + image légendée + attaque + corps en colonnes + chute :
+    # tout ce qu'il faut pour décider tient sur cet unique écran, sans clic.
     st.markdown(
         anim.fade_up(
             '<div class="answer-verdict">'
@@ -491,45 +490,19 @@ def render_result_screen(result: dict, graph: dict) -> None:
         ),
         unsafe_allow_html=True,
     )
-    st.markdown(anim.fade_up(ranking_table_html(result)), unsafe_allow_html=True)
+    st.markdown(anim.fade_up(front_page_html(result)), unsafe_allow_html=True)
 
-    st.markdown(
-        '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;opacity:.55;margin:22px 0 6px;">Et si je change de culture ?</div>',
-        unsafe_allow_html=True,
+    at_risk_crops = sorted(
+        (c for c in result["cultures"] if c["etat"] != "sûr"),
+        key=lambda c: c["recouvrement_avec_tension_j"],
+        reverse=True,
     )
+    for crop in at_risk_crops:
+        with st.expander(f"Comment sécuriser {crop['culture']}"):
+            st.markdown(anim.fade_up(anim.card_hover(levers_panel(crop))), unsafe_allow_html=True)
+
     crops_by_name = {c["culture"]: c for c in result["cultures"]}
     names = list(crops_by_name.keys())
-    current_name = next((c["culture"] for c in result["cultures"] if c.get("deja_cultivee_sur_parcelle")), names[0])
-    best_name = min(result["cultures"], key=lambda c: c["rang"])["culture"]
-    default_b_name = best_name if best_name != current_name else next((n for n in names if n != current_name), current_name)
-    compare_col_a, compare_col_b = st.columns(2)
-    with compare_col_a:
-        crop_a_name = st.selectbox("Culture actuelle", names, index=names.index(current_name), key="cmp_a")
-    with compare_col_b:
-        crop_b_name = st.selectbox("Culture envisagée", names, index=names.index(default_b_name), key="cmp_b")
-    st.markdown(comparator_html(crops_by_name[crop_a_name], crops_by_name[crop_b_name]), unsafe_allow_html=True)
-
-    # --- Niveau 2 : pourquoi -------------------------------------------------
-    st.markdown(anim.animated_divider("var(--craie)"), unsafe_allow_html=True)
-    st.markdown(screen_kicker_html("POURQUOI"), unsafe_allow_html=True)
-    st.markdown(anim.fade_up(analysis_article(result), delay=1), unsafe_allow_html=True)
-    reason_lines = "".join(
-        f'<div style="font-size:14px;padding:5px 0;opacity:.85;">{html.escape(crop_reason_line(c))}</div>'
-        for c in sorted(result["cultures"], key=lambda c: c["rang"])
-    )
-    st.markdown(f'<div style="margin:6px 0 4px;">{reason_lines}</div>', unsafe_allow_html=True)
-
-    at_risk_crops = [c for c in result["cultures"] if c["etat"] != "sûr"]
-    if not at_risk_crops:
-        st.markdown(anim.fade_up(anim.card_hover(no_risk_panel_html())), unsafe_allow_html=True)
-    elif len(at_risk_crops) == 1:
-        st.markdown(anim.fade_up(anim.card_hover(levers_panel(at_risk_crops[0]))), unsafe_allow_html=True)
-    else:
-        at_risk_crops.sort(key=lambda c: c["recouvrement_avec_tension_j"], reverse=True)
-        lever_tabs = st.tabs([c["culture"].capitalize() for c in at_risk_crops])
-        for tab, crop in zip(lever_tabs, at_risk_crops):
-            with tab:
-                st.markdown(anim.fade_up(anim.card_hover(levers_panel(crop))), unsafe_allow_html=True)
 
     sim_input_rows = [
         {
@@ -570,40 +543,58 @@ def render_result_screen(result: dict, graph: dict) -> None:
 
     simulated_by_culture = _simulate(pd.DataFrame(sim_input_rows))
 
-    calendar_tab, simulate_tab, report_tab = st.tabs(["Calendrier & eau", "Simuler mes prix", "Rapport"])
+    # --- Niveau 2 : le reste, en boutons — chacun ouvre un panneau, parfois
+    # lui-même divisé en sous-onglets. Rien n'est perdu, juste pas prioritaire.
+    action_col_a, action_col_b = st.columns(2)
+    with action_col_a:
+        with st.popover("🔍 Comparer deux cultures", width="stretch"):
+            current_name = next((c["culture"] for c in result["cultures"] if c.get("deja_cultivee_sur_parcelle")), names[0])
+            best_name = min(result["cultures"], key=lambda c: c["rang"])["culture"]
+            default_b_name = best_name if best_name != current_name else next((n for n in names if n != current_name), current_name)
+            compare_col_a, compare_col_b = st.columns(2)
+            with compare_col_a:
+                crop_a_name = st.selectbox("Culture actuelle", names, index=names.index(current_name), key="cmp_a")
+            with compare_col_b:
+                crop_b_name = st.selectbox("Culture envisagée", names, index=names.index(default_b_name), key="cmp_b")
+            st.markdown(comparator_html(crops_by_name[crop_a_name], crops_by_name[crop_b_name]), unsafe_allow_html=True)
+            st.caption("Comparez librement deux cultures de la comparaison : eau, coût, marge et risque.")
 
-    with calendar_tab:
-        st.markdown(anim.fade_up(render_timeline(result)), unsafe_allow_html=True)
-        st.markdown(anim.fade_up(render_water_chart(result["cultures"], result["fenetre_de_tension"])), unsafe_allow_html=True)
-        st.caption("Besoins d'irrigation répartis sur le cycle de chaque culture, avec la fenêtre de tension hydrique.")
+    with action_col_b:
+        with st.popover("🧰 Outils avancés", width="stretch"):
+            calendar_tab, simulate_tab, report_tab = st.tabs(["Calendrier & eau", "Simuler mes prix", "Rapport"])
 
-    with simulate_tab:
-        st.markdown(
-            '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;opacity:.55;margin:.7rem 0 .2rem;">Simulez avec vos propres chiffres</div>',
-            unsafe_allow_html=True,
-        )
-        st.caption("Remplacez ces valeurs par les vôtres pour les trois cultures d'un coup. Le calendrier et le classement restent ceux du scénario ; seule la marge simulée change.")
-        edited_df = st.data_editor(pd.DataFrame(sim_input_rows), hide_index=True, width="stretch", key="simulation_editor")
-        simulated_by_culture = _simulate(edited_df)
-        st.markdown(simulation_recap_html(result["cultures"], simulated_by_culture), unsafe_allow_html=True)
+            with calendar_tab:
+                st.markdown(anim.fade_up(render_timeline(result)), unsafe_allow_html=True)
+                st.markdown(anim.fade_up(render_water_chart(result["cultures"], result["fenetre_de_tension"])), unsafe_allow_html=True)
+                st.caption("Besoins d'irrigation répartis sur le cycle de chaque culture, avec la fenêtre de tension hydrique.")
 
-    with report_tab:
-        st.markdown('<div class="report-subhead">Rapport de comparaison</div>', unsafe_allow_html=True)
-        report_action_col, report_download_col = st.columns(2)
-        with report_action_col:
-            if st.session_state.get("last_report"):
-                st.success("Rapport archivé — le CSV est prêt à droite.")
-            else:
-                st.button("Générer et archiver le rapport", width="stretch", on_click=archive_report, args=(result, simulated_by_culture))
-        with report_download_col:
-            if st.session_state.get("last_report"):
-                st.download_button(
-                    "Télécharger le rapport (CSV)",
-                    data=report_to_csv(st.session_state.last_report),
-                    file_name=f"comparaison_{result['parcelle_id']}.csv",
-                    mime="text/csv",
-                    width="stretch",
+            with simulate_tab:
+                st.markdown(
+                    '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;opacity:.55;margin:.7rem 0 .2rem;">Simulez avec vos propres chiffres</div>',
+                    unsafe_allow_html=True,
                 )
+                st.caption("Remplacez ces valeurs par les vôtres pour les trois cultures d'un coup. Le calendrier et le classement restent ceux du scénario ; seule la marge simulée change.")
+                edited_df = st.data_editor(pd.DataFrame(sim_input_rows), hide_index=True, width="stretch", key="simulation_editor")
+                simulated_by_culture = _simulate(edited_df)
+                st.markdown(simulation_recap_html(result["cultures"], simulated_by_culture), unsafe_allow_html=True)
+
+            with report_tab:
+                st.markdown('<div class="report-subhead">Rapport de comparaison</div>', unsafe_allow_html=True)
+                report_action_col, report_download_col = st.columns(2)
+                with report_action_col:
+                    if st.session_state.get("last_report"):
+                        st.success("Rapport archivé — le CSV est prêt à droite.")
+                    else:
+                        st.button("Générer et archiver le rapport", width="stretch", on_click=archive_report, args=(result, simulated_by_culture))
+                with report_download_col:
+                    if st.session_state.get("last_report"):
+                        st.download_button(
+                            "Télécharger le rapport (CSV)",
+                            data=report_to_csv(st.session_state.last_report),
+                            file_name=f"comparaison_{result['parcelle_id']}.csv",
+                            mime="text/csv",
+                            width="stretch",
+                        )
 
     # --- Niveau 3 : preuve (repliée, contenu technique inchangé) ------------
     st.markdown(anim.animated_divider("var(--craie)"), unsafe_allow_html=True)
@@ -722,10 +713,15 @@ st.markdown(navbar_html(view), unsafe_allow_html=True)
 if view == "accueil":
     st.markdown(hero_html(), unsafe_allow_html=True)
     st.markdown(stats_band_html(), unsafe_allow_html=True)
-    st.markdown(about_html(), unsafe_allow_html=True)
-    st.markdown(values_html(), unsafe_allow_html=True)
-    st.markdown(expertise_html(), unsafe_allow_html=True)
-    st.markdown(approach_html(), unsafe_allow_html=True)
+    story_tabs = st.tabs(["Notre mission", "Nos valeurs", "Nos expertises", "Notre approche"])
+    with story_tabs[0]:
+        st.markdown(about_html(), unsafe_allow_html=True)
+    with story_tabs[1]:
+        st.markdown(values_html(), unsafe_allow_html=True)
+    with story_tabs[2]:
+        st.markdown(expertise_html(), unsafe_allow_html=True)
+    with story_tabs[3]:
+        st.markdown(approach_html(), unsafe_allow_html=True)
     st.markdown(cta_html(), unsafe_allow_html=True)
     st.markdown(footer_html(), unsafe_allow_html=True)
     st.stop()
@@ -937,7 +933,6 @@ elif step == 3:
 
     step_nav(prev_step=2, prev_label="← Retour au scénario météo")
 
-st.markdown(cta_html(), unsafe_allow_html=True)
 st.markdown(footer_html(), unsafe_allow_html=True)
 
 _advance_demo()

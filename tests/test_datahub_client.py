@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import threading
+from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from unittest.mock import MagicMock
 from urllib.parse import unquote, urlparse
@@ -107,7 +108,7 @@ def fake_gms():
     server = FakeGMS().start()
     server.properties[HYDRO_URN] = {
         "name": "hubeau_hydrometrie",
-        "customProperties": {"last_updated": "2026-08-04", "freshness_sla_days": "5"},
+        "customProperties": {"last_updated": (date.today() - timedelta(days=1)).isoformat(), "freshness_sla_days": "5"},
     }
     server.relationships[HYDRO_URN] = [
         {"entity": RECO_URN, "type": "DOWNSTREAM"},
