@@ -6,13 +6,14 @@ import html
 from typing import Any
 
 from services.provenance_service import short_name, urn_for
+from ui.i18n import MS, t
 
 ORDER = ["hubeau_hydrometrie", "hubeau_piezometrie", "hubeau_onde", "climat_journalier", "prevision_saisonniere", "parcelles", "sol_rrp", "features_bilan_hydrique", "ref_agro_economique", "scenarios_cultures", "recommandations_parcelle"]
 
 
-def render_spine(graph: dict[str, Any], impacted: set[str] | None = None) -> str:
+def render_spine(graph: dict[str, Any], impacted: set[str] | None = None, lang: str = MS) -> str:
     impacted = impacted or set()
-    rows = ['<aside class="spine" aria-label="Épine de provenance"><h2>Provenance</h2>']
+    rows = [f'<aside class="spine" aria-label="{html.escape(t(lang, "spine.aria"))}"><h2>{html.escape(t(lang, "spine.title"))}</h2>']
     for index, name in enumerate(ORDER):
         try:
             urn = urn_for(graph, name)
@@ -22,6 +23,6 @@ def render_spine(graph: dict[str, Any], impacted: set[str] | None = None) -> str
             css_state = "rupture" if risk else ("vigilance" if state == "vigilance" else "sur")
             rows.append(f'<section class="spine-segment {"risk" if risk else ""}" style="--i:{index}"><div><span class="dot {css_state}" aria-hidden="true"></span><strong>{html.escape(name)}</strong></div><div class="mono">{html.escape(str(props["last_updated"]))}</div><div>{html.escape(str(props["niveau_de_preuve"]))} · <span class="state {css_state}">{state}</span></div><div class="urn">{html.escape(urn)}</div></section>')
         except ValueError:
-            rows.append(f'<section class="spine-segment risk"><strong>{html.escape(name)}</strong><div class="state rupture">rupture — absent</div></section>')
+            rows.append(f'<section class="spine-segment risk"><strong>{html.escape(name)}</strong><div class="state rupture">{html.escape(t(lang, "spine.risk_absent"))}</div></section>')
     rows.append("</aside>")
     return "".join(rows)

@@ -364,9 +364,16 @@ def ranking_table_html(result: dict[str, Any], lang: str = MS) -> str:
 
 
 _CROP_IMAGE_KEYS = {"maïs": "mais", "tournesol": "tournesol", "orge de printemps": "orge"}
+_CROP_ARTICLES = {"maïs": "le", "tournesol": "le", "orge de printemps": "l'"}
 
 
-def front_page_html(result: dict[str, Any]) -> str:
+def _with_article(culture: str) -> str:
+    article = _CROP_ARTICLES.get(culture, "le")
+    separator = "" if article == "l'" else " "
+    return f"{article}{separator}{culture}"
+
+
+def front_page_html(result: dict[str, Any], lang: str = MS) -> str:
     """Écran résultat, niveau 1, mis en page façon « une » de journal : chapô,
     image légendée en habillage, attaque (qui/quoi/où/quand), corps en
     colonnes (classement + raisons) et chute — toute l'info essentielle
@@ -379,26 +386,17 @@ def front_page_html(result: dict[str, Any]) -> str:
     at_risk = [c for c in cultures if c["etat"] != "sûr"]
 
     if best["etat"] == "sûr":
-        chapo = (
-            f'{best["culture"].capitalize()} traverse son stade critique sans croiser la tension en eau prévue '
-            f'sur {html.escape(commune)} : c\'est l\'option la plus sûre des {len(cultures)} comparées.'
-        )
+        chapo = t(lang, "front.chapo.safe", crop=best["culture"].capitalize(), commune=html.escape(commune), n=len(cultures))
     else:
-        chapo = (
-            f'Sur {html.escape(commune)}, {best["culture"]} reste la meilleure option malgré '
-            f'{best["recouvrement_avec_tension_j"]} jours de recouvrement avec la tension en eau prévue.'
-        )
+        chapo = t(lang, "front.chapo.risk", commune=html.escape(commune), crop=best["culture"], days=best["recouvrement_avec_tension_j"])
 
     tension_debut = ""
     if result.get("fenetre_de_tension"):
         first_mois = min(m["mois"] for m in result["fenetre_de_tension"])
         year, month = int(first_mois[:4]), int(first_mois[5:7])
-        tension_debut = f" à partir de {month_labels(MS)[month]} {year}"
+        tension_debut = t(lang, "front.from", month=month_labels(lang)[month], year=year)
     attaque = (
-        f'<p style="margin:0 0 12px;">Sur une parcelle de {html.escape(commune)}, {len(cultures)} cultures — '
-        f'{", ".join(html.escape(c["culture"]) for c in cultures)} — sont comparées à partir d\'un semis prévu au '
-        f'{_fmt(best["calendrier"]["semis"])}. Le modèle date le stade critique de chacune et le confronte à la '
-        f'fenêtre de tension en eau{html.escape(tension_debut)}.</p>'
+        f'<p style="margin:0 0 12px;">{t(lang, "front.attaque", commune=html.escape(commune), n=len(cultures), list=", ".join(html.escape(c["culture"]) for c in cultures), date=_fmt(best["calendrier"]["semis"]), tension=html.escape(tension_debut))}</p>'
     )
 
     image_html = ""
@@ -410,30 +408,27 @@ def front_page_html(result: dict[str, Any]) -> str:
                 '<figure style="float:right;width:34%;max-width:280px;margin:0 0 12px 20px;">'
                 f'<img src="{uri}" alt="{html.escape(best["culture"])}" style="width:100%;height:auto;border-radius:2px;display:block;"/>'
                 '<figcaption style="font-size:12px;opacity:.6;margin-top:6px;font-family:\'IBM Plex Mono\',monospace;">'
-                f'{html.escape(best["culture"].capitalize())} — option recommandée sur cette parcelle</figcaption>'
+                f'{html.escape(t(lang, "front.figure", crop=best["culture"].capitalize()))}</figcaption>'
                 "</figure>"
             )
 
     reason_lines = "".join(
-        f'<div style="font-size:14px;padding:5px 0;opacity:.85;">{html.escape(crop_reason_line(c))}</div>'
+        f'<div style="font-size:14px;padding:5px 0;opacity:.85;">{html.escape(crop_reason_line(c, lang))}</div>'
         for c in sorted(cultures, key=lambda c: c["rang"])
     )
     corps = (
-        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;font-weight:600;text-transform:uppercase;'
-        'letter-spacing:.02em;opacity:.55;margin:14px 0 4px;">Le classement</div>'
-        f'{ranking_table_html(result)}'
-        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;font-weight:600;text-transform:uppercase;'
-        'letter-spacing:.02em;opacity:.55;margin:18px 0 4px;">Pourquoi</div>'
+        f'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;font-weight:600;text-transform:uppercase;'
+        f'letter-spacing:.02em;opacity:.55;margin:14px 0 4px;">{html.escape(t(lang, "front.ranking"))}</div>'
+        f'{ranking_table_html(result, lang)}'
+        f'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;font-weight:600;text-transform:uppercase;'
+        f'letter-spacing:.02em;opacity:.55;margin:18px 0 4px;">{html.escape(t(lang, "front.why"))}</div>'
         f'<div>{reason_lines}</div>'
     )
 
     if at_risk:
-        chute = (
-            f'Reste à décider : sécuriser {at_risk[0]["culture"]} avec les leviers ci-dessous, ou partir '
-            f'directement sur {best["culture"]}.'
-        )
+        chute = t(lang, "front.chute.risk", crop1=_with_article(at_risk[0]["culture"]), crop2=_with_article(best["culture"]))
     else:
-        chute = "Aucun arbitrage à faire cette année sur l'eau : le calendrier passe partout."
+        chute = t(lang, "front.chute.ok")
 
     return f"""
     <article style="margin-top:6px;">

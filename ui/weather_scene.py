@@ -12,6 +12,8 @@ from __future__ import annotations
 import html
 from typing import Any, Mapping
 
+from ui.i18n import MS
+
 RAIN_DROPS_MAX = 40
 GRASS_BLADES_MAX = 15
 
@@ -97,7 +99,7 @@ def crop_badge_html(etat: str) -> str:
     return '<span class="crop-badge" aria-hidden="true"><span class="mini-sun chaud"></span></span>'
 
 
-def render_grass_band() -> str:
+def render_grass_band(lang: str = MS) -> str:
     """Bande d'herbe animée, séparateur avant l'avertissement final."""
     blades = "".join(_blade_html(i) for i in range(GRASS_BLADES_MAX))
     return f'<div class="grass-band" aria-hidden="true">{blades}</div>'

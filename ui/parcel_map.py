@@ -13,6 +13,8 @@ from __future__ import annotations
 import html
 from typing import Any
 
+from ui.i18n import MS, t
+
 SELECTED_FILL = "#2B6C8F"
 SELECTED_STROKE = "#14394B"
 OTHER_FILL = "#D8E2D6"
@@ -59,6 +61,7 @@ def render_parcel_map(
     parcels: list[dict[str, Any]],
     stations: list[dict[str, Any]],
     selected_id: str | None,
+    lang: str = MS,
 ) -> str:
     """SVG de la carte : parcelles (polygones) + stations (pastilles)."""
     selected_id = selected_id or (parcels[0].get("id") if parcels else None)
@@ -99,8 +102,8 @@ def render_parcel_map(
     out: list[str] = []
     if all_points or station_points:
         out.append(
-            f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="Carte des parcelles '
-            f'et des stations d\'eau" xmlns="http://www.w3.org/2000/svg" '
+            f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="{html.escape(t(lang, "map.aria"))}" '
+            f'xmlns="http://www.w3.org/2000/svg" '
             f'style="width:100%;height:auto;display:block;background:#F5F7F4;">'
             f'<rect width="{width}" height="{height}" fill="#F5F7F4"/>'
         )
@@ -132,9 +135,9 @@ def render_parcel_map(
             f"<summary>{html.escape(str(label))}"
             f'<span class="parcel-card-area">{parcel.get("surface_ha", "?")} ha</span></summary>'
             f"<dl>"
-            f"<dt>Sol</dt><dd>{html.escape(str(parcel.get('sol', '—')))}</dd>"
-            f"<dt>Réserve utile</dt><dd>{parcel.get('reserve_utile_mm', '—')} mm</dd>"
-            f"<dt>Commune</dt><dd>{html.escape(str(parcel.get('commune', '—')))}</dd>"
+            f"<dt>{html.escape(t(lang, 'map.soil'))}</dt><dd>{html.escape(str(parcel.get('sol', '—')))}</dd>"
+            f"<dt>{html.escape(t(lang, 'map.ru'))}</dt><dd>{parcel.get('reserve_utile_mm', '—')} mm</dd>"
+            f"<dt>{html.escape(t(lang, 'map.commune'))}</dt><dd>{html.escape(str(parcel.get('commune', '—')))}</dd>"
             f"</dl></details>"
         )
 
@@ -163,10 +166,10 @@ def render_parcel_map(
             f'stroke="{BORDER}"/>'
             f'<circle cx="{width - 192:.0f}" cy="{height - 42:.0f}" r="5" fill="{SELECTED_FILL}"/>'
             f'<text x="{width - 180:.0f}" y="{height - 39:.0f}" font-family="system-ui" font-size="11" '
-            f'fill="#1C2620">Parcelle sélectionnée</text>'
+            f'fill="#1C2620">{html.escape(t(lang, "map.selected"))}</text>'
             f'<circle cx="{width - 192:.0f}" cy="{height - 24:.0f}" r="5" fill="{STATION_COLOR}"/>'
             f'<text x="{width - 180:.0f}" y="{height - 21:.0f}" font-family="system-ui" font-size="11" '
-            f'fill="#1C2620">Station d’eau</text>'
+            f'fill="#1C2620">{html.escape(t(lang, "map.station"))}</text>'
             f"</g>"
         )
         out.append("</svg>")

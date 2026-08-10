@@ -13,6 +13,8 @@ import html
 from datetime import date
 from typing import Any
 
+from ui.i18n import MS, t
+
 
 def _add_month(year: int, month: int, delta: int) -> tuple[int, int]:
     total = year * 12 + (month - 1) + delta
@@ -35,7 +37,7 @@ def _crop_months(crop: dict[str, Any]) -> list[tuple[int, int]]:
     return months
 
 
-def render_crop_scenario(crop: dict[str, Any], tension_months: set[str], play_token: int) -> str:
+def render_crop_scenario(crop: dict[str, Any], tension_months: set[str], play_token: int, lang: str = MS) -> str:
     """Frise mensuelle d'une culture : icône météo par mois, curseur animé, repère de risque."""
     months = _crop_months(crop)
     n = len(months)
@@ -65,7 +67,7 @@ def render_crop_scenario(crop: dict[str, Any], tension_months: set[str], play_to
         )
 
     cursor_duration = max(1.6, n * 0.5)
-    risk_marker = f'<div class="frise-risk" style="left:{risk_left:.1f}%;">⚠️ tension</div>' if risk_left is not None else ""
+    risk_marker = f'<div class="frise-risk" style="left:{risk_left:.1f}%;">{html.escape(t(lang, "tl.risk_marker"))}</div>' if risk_left is not None else ""
 
     return (
         f'<div class="frise" data-play="{play_token}">'

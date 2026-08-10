@@ -151,7 +151,7 @@ def hero_html(lang: str = MS) -> str:
         f'<h1 class="site-hero-title">{t(lang, "hero.title")}</h1>'
         f'<p class="site-hero-lead">{t(lang, "hero.lead")}</p>'
         '<div class="site-hero-cta">'
-        f'<a class="site-btn site-btn-primary" href="?view=application&lang={lang}">{t(lang, "hero.cta.analyze")}</a>'
+        f'<a class="site-btn site-btn-primary" href="?view=application&lang={lang}&start=1">{t(lang, "hero.cta.analyze")}</a>'
         f'<a class="site-btn site-btn-ghost" href="?view=donnees&lang={lang}">{t(lang, "hero.cta.graph")}</a>'
         "</div>"
         '<div class="site-hero-chips">'
@@ -333,7 +333,7 @@ def cta_html(lang: str = MS) -> str:
         '<div class="site-cta-inner">'
         f"<h2>{t(lang, 'cta.title')}</h2>"
         f"<p>{t(lang, 'cta.text')}</p>"
-        f'<a class="site-btn site-btn-primary site-btn-lg" href="?view=application&lang={lang}">{t(lang, "cta.btn")}</a>'
+        f'<a class="site-btn site-btn-primary site-btn-lg" href="?view=application&lang={lang}&start=1">{t(lang, "cta.btn")}</a>'
         "</div>"
         "</section>"
     )

@@ -11,11 +11,19 @@ from __future__ import annotations
 import html
 from typing import Any
 
+from ui.i18n import MS, t
+
 GROUP_LABELS = {
     "confiance": ("CONFIANCE", "Ce que les données garantissent", "var(--sur)"),
     "produit": ("PRODUIT", "Le parcours décisionnel en chiffres", "var(--eau)"),
     "ia": ("IA & AGENTS", "Ce que le système calcule et expose", "var(--vigilance)"),
 }
+
+
+def _group_text(key: str, lang: str) -> tuple[str, str]:
+    titles = {"confiance": t(lang, "kpi.confiance"), "produit": t(lang, "kpi.produit"), "ia": t(lang, "kpi.ia")}
+    subtitles = {"confiance": t(lang, "kpi.confiance.sub"), "produit": t(lang, "kpi.produit.sub"), "ia": t(lang, "kpi.ia.sub")}
+    return titles.get(key, key.upper()), subtitles.get(key, "")
 
 _TONE_COLORS = {
     "sur": "var(--sur)",
@@ -53,13 +61,13 @@ def render_kpi_dashboard(
     *,
     live: bool = False,
     mode_donnees: str = "inconnu",
+    lang: str = MS,
 ) -> str:
     """HTML du tableau de bord KPI (3 familles), valeurs prêtes à compter."""
     blocks = []
     for group_index, (key, kpis) in enumerate(groups.items()):
-        label, subtitle, accent = GROUP_LABELS.get(
-            key, (key.upper(), "", "var(--encre)")
-        )
+        label, subtitle = _group_text(key, lang)
+        accent = GROUP_LABELS.get(key, (key.upper(), "", "var(--encre)"))[2]
         tiles = "".join(
             _kpi_tile(kpi, index, group_index)
             for index, kpi in enumerate(kpis)
@@ -74,11 +82,8 @@ def render_kpi_dashboard(
             f'<div class="kpi-grid">{tiles}</div>'
             f"</section>"
         )
-    origin = "graphe DataHub" if live else "calcul local (fixture)"
-    note = (
-        f"Valeurs lues dans le {origin} · mode de données : "
-        f"{html.escape(mode_donnees)} · aucun chiffre inventé."
-    )
+    origin = t(lang, "kpi.origin.live") if live else t(lang, "kpi.origin.local")
+    note = t(lang, "kpi.note", origin=origin, mode=html.escape(mode_donnees))
     return (
         f'<div class="kpi-dashboard">'
         f'{"".join(blocks)}'
@@ -87,10 +92,10 @@ def render_kpi_dashboard(
     )
 
 
-def kpis_html(graph: dict[str, Any], result: dict[str, Any], client: Any | None = None) -> str:
+def kpis_html(graph: dict[str, Any], result: dict[str, Any], client: Any | None = None, lang: str = MS) -> str:
     """API courte : calcule et rend le tableau de bord."""
     from services.kpi_service import build_kpis
 
     groups = build_kpis(graph, result, client)
     live = bool(client) and getattr(client, "connected", lambda: False)()
-    return render_kpi_dashboard(groups, live=live, mode_donnees=result.get("mode_donnees", "inconnu"))
+    return render_kpi_dashboard(groups, live=live, mode_donnees=result.get("mode_donnees", "inconnu"), lang=lang)

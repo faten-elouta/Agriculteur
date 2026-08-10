@@ -28,19 +28,19 @@ def test_navbar_has_four_tabs_and_active_state():
     out = navbar_html("application")
     for label in ("Vision", "Application", "Graphe & IA", "Contact"):
         assert label in out
-    assert 'href="?view=accueil"' in out
-    assert 'href="?view=application"' in out
-    assert 'href="?view=donnees"' in out
-    assert 'href="?view=contact"' in out
-    assert 'class="site-nav-item active" href="?view=application"' in out
+    assert 'href="?view=accueil&lang=fr"' in out
+    assert 'href="?view=application&lang=fr"' in out
+    assert 'href="?view=donnees&lang=fr"' in out
+    assert 'href="?view=contact&lang=fr"' in out
+    assert 'class="site-nav-item active" href="?view=application&lang=fr"' in out
     assert "Terroir" in out
 
 
 def test_hero_has_title_cta_and_images():
     out = hero_html()
     assert "Choisir sa culture" in out
-    assert 'href="?view=application"' in out
-    assert 'href="?view=donnees"' in out
+    assert 'href="?view=application&lang=fr&start=1"' in out
+    assert 'href="?view=donnees&lang=fr"' in out
     assert "data:image/jpeg;base64," in out
     assert "site-collage-main" in out
     assert "site-collage-card" in out
@@ -90,7 +90,7 @@ def test_approach_has_three_steps():
 def test_cta_points_to_application():
     out = cta_html()
     assert "Analyser ma parcelle" in out
-    assert 'href="?view=application"' in out
+    assert 'href="?view=application&lang=fr&start=1"' in out
 
 
 def test_footer_has_columns_and_legal():
@@ -151,4 +151,6 @@ def test_auto_demo_via_url_starts_sequence():
     at.query_params.update({"view": "application", "demo": "1"})
     at.run()
     assert not at.exception
-    assert any("Arrêter" in b.label for b in at.button)
+    # La démo joue toute sa séquence en un seul run() (chaque étape déclenche
+    # st.rerun() en interne) ; elle se termine sur la dernière étape du tunnel.
+    assert at.session_state["step"] == 3

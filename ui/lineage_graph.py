@@ -13,6 +13,8 @@ import html
 from datetime import date, datetime
 from typing import Any
 
+from ui.i18n import MS, t
+
 STATUS_OK = "ok"
 STATUS_STALE = "stale"
 STATUS_UNKNOWN = "unknown"
@@ -90,6 +92,7 @@ def render_lineage_graph(
     impacted_urns: set[str] | None = None,
     *,
     animate: bool = True,
+    lang: str = MS,
 ) -> str:
     """HTML/SVG du graphe de lineage + fiches détaillées sous chaque nœud."""
     datasets = graph.get("datasets", {})
@@ -160,7 +163,7 @@ def render_lineage_graph(
     for node in nodes:
         urn = node["urn"]
         x, y = positions[urn]
-        status, label = statuses.get(urn, (STATUS_UNKNOWN, "Fraîcheur inconnue"))
+        status, label = statuses.get(urn, (STATUS_UNKNOWN, t(lang, "lg.unknown")))
         color = _STATUS_COLORS[status]
         meta = datasets.get(urn, {})
         proof = PROOF_LABELS.get(meta.get("niveau_de_preuve", ""), meta.get("niveau_de_preuve", ""))
@@ -179,13 +182,13 @@ def render_lineage_graph(
             f"</a>"
         )
         details = [
-            ("Statut", label),
+            (t(lang, "lg.status"), label),
             ("SLA", f'{meta.get("freshness_sla_days", "—")} j'),
-            ("Dernière mise à jour", meta.get("last_updated", "—")),
-            ("Niveau de preuve", proof),
-            ("Couverture", meta.get("spatial_coverage", "—")),
+            (t(lang, "lg.last_update"), meta.get("last_updated", "—")),
+            (t(lang, "lg.proof"), proof),
+            (t(lang, "lg.coverage"), meta.get("spatial_coverage", "—")),
             ("Licence", meta.get("licence", "—")),
-            ("Redistribuable", meta.get("redistribuable", "—")),
+            (t(lang, "lg.reusable"), meta.get("redistribuable", "—")),
         ]
         rows_detail = "".join(
             f"<dt>{html.escape(k)}</dt><dd>{html.escape(str(v))}</dd>" for k, v in details
@@ -201,9 +204,9 @@ def render_lineage_graph(
     legend = "".join(
         f'<span class="lineage-legend {color}"><i></i>{label}</span>'
         for color, label in (
-            (STATUS_OK, "à jour"),
-            (STATUS_STALE, "périmé / impacté"),
-            (STATUS_UNKNOWN, "inconnu"),
+            (STATUS_OK, t(lang, "lg.fresh.short")),
+            (STATUS_STALE, t(lang, "lg.stale.short")),
+            (STATUS_UNKNOWN, t(lang, "lg.legend_unknown")),
         )
     )
 
@@ -216,7 +219,7 @@ def render_lineage_graph(
         f'<div class="lineage-stage">'
         f"<svg class=\"lineage-svg\" viewBox=\"0 0 {width} {height}\" "
         f'preserveAspectRatio="none" role="img" '
-        f'aria-label="Graphe de lineage des données">{ "".join(edge_html) }</svg>'
+        f'aria-label="{html.escape(t(lang, "lg.aria"))}">{ "".join(edge_html) }</svg>'
         f'{"".join(node_html)}'
         f"</div>"
         f'<div class="lineage-legend">{legend}</div>'

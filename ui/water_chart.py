@@ -17,6 +17,8 @@ import html
 from datetime import date
 from typing import Any
 
+from ui.i18n import MS, t
+
 STATE_COLORS = {"sûr": "#3F7A5A", "vigilance": "#C08A2E", "rupture": "#A63D2F"}
 
 WIDTH, HEIGHT = 900, 296
@@ -74,7 +76,7 @@ def _series(crops: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str
     return series, month_list
 
 
-def render_water_chart(crops: list[dict[str, Any]], tension_months: list[str]) -> str:
+def render_water_chart(crops: list[dict[str, Any]], tension_months: list[str], lang: str = MS) -> str:
     """SVG animé des lames d'eau mensuelles (déjà calculées, aucune source externe)."""
     series, month_list = _series(crops)
     if not month_list:
@@ -92,7 +94,7 @@ def render_water_chart(crops: list[dict[str, Any]], tension_months: list[str]) -
     out: list[str] = []
     out.append(
         f'<svg viewBox="0 0 {WIDTH} {HEIGHT}" role="img" '
-        f'aria-label="Lame d\'eau mensuelle par culture" xmlns="http://www.w3.org/2000/svg" '
+        f'aria-label="{html.escape(t(lang, "tl.water_aria"))}" xmlns="http://www.w3.org/2000/svg" '
         f'style="width:100%;height:auto;display:block;">'
     )
 
@@ -106,7 +108,7 @@ def render_water_chart(crops: list[dict[str, Any]], tension_months: list[str]) -
     )
     out.append(
         f'<text x="18" y="18" fill="#1C2620" font-family="system-ui" font-size="12" '
-        f'font-weight="600">Lame d\'eau mensuelle (mm/mois)</text>{legend}'
+        f'font-weight="600">{html.escape(t(lang, "tl.water_title"))}</text>{legend}'
     )
 
     # Bandeau de tension + flammèches par mois.
@@ -122,7 +124,7 @@ def render_water_chart(crops: list[dict[str, Any]], tension_months: list[str]) -
         f'<rect x="18" y="{HEADER_H}" width="{WIDTH - 36}" height="{TENSION_H}" fill="none" '
         f'stroke="#C08A2E" stroke-dasharray="4 4" opacity="0.5"/>'
         f'<text x="24" y="{HEADER_H + 17}" fill="#8A6213" font-family="system-ui" font-size="10.5" '
-        f'font-weight="600">FENÊTRE DE TENSION HYDRIQUE</text>'
+        f'font-weight="600">{html.escape(t(lang, "tl.water_stress"))}</text>'
     )
 
     # Axe Y.
