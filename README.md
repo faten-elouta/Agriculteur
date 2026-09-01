@@ -9,6 +9,10 @@ Les parcelles sont des parcelles RPG réelles (IGN, anonymisées), les communes
 proviennent du référentiel officiel et les stations d'eau de Hub'Eau. Cet outil
 est une démonstration technique, pas un conseil agronomique ou financier.
 
+## Aperçu
+
+![Terroir Context Agents — landing page](assets/screenshot-app.png)
+
 ## Démarrage rapide
 
 ```bash
@@ -23,12 +27,12 @@ une commune puis cliquez sur « Chercher les parcelles » : le RPG, le sol
 ## Démo en ligne
 
 - **Application** : https://terroir-context-agents.vercel.app (Streamlit, Vercel
-  Fluid Compute, proxy HTTP + WebSocket)
+Fluid Compute, proxy HTTP + WebSocket)
 - **Graphe de contexte DataHub** : https://terroir-context-gms.onrender.com
-  (serveur GMS-compatible, conteneurisé, qui expose le graphe d'exemple de 11
-  datasets — voir `render.yaml` et `gms/Dockerfile`)
+(serveur GMS-compatible, conteneurisé, qui expose le graphe d'exemple de 11
+datasets — voir `render.yaml` et `gms/Dockerfile`)
 - **Exemple autonome** : `python examples/gms_demo.py` interroge le GMS public
-  (lecture, lineage, écriture de runs et d'incidents) avec la bibliothèque standard.
+(lecture, lineage, écriture de runs et d'incidents) avec la bibliothèque standard.
 
 ## Site vitrine
 
@@ -36,12 +40,12 @@ L'application s'ouvre sur une landing page (format consilium-bsf.fr/vision) avec
 des onglets de navigation en haut :
 
 - **Vision** (accueil) : hero avec collage de photos de cultures, chiffres clés,
-  présentation « un conseil fondé sur les données », valeurs, expertises
-  illustrées et approche en trois étapes (`ui/site_sections.py`).
+présentation « un conseil fondé sur les données », valeurs, expertises
+illustrées et approche en trois étapes (`ui/site_sections.py`).
 - **Application** : le tunnel décisionnel complet (parcelle → comparaison →
-  scénario météo → provenance des chiffres).
+scénario météo → provenance des chiffres).
 - **Graphe & IA** : vue DataHub — graphe connecté, KPIs Confiance/Produit/IA,
-  console de supervision de l'agent et lineage interactif.
+console de supervision de l'agent et lineage interactif.
 - **Contact** : cartes équipe, code et live.
 
 La navigation par onglets et les boutons d'action passent par des attributs
@@ -57,12 +61,12 @@ automatiquement le mode démo (les six étapes se succèdent seules).
 Trois agents forment une boucle autour de DataHub :
 
 - **Cartographe** (`catalog/`) décrit sources, schémas, ownership, vocabulaire et
-  lineage. Il peut émettre le graphe vers DataHub ou construire la fixture locale.
+lineage. Il peut émettre le graphe vers DataHub ou construire la fixture locale.
 - **Conseiller** (`services/recommendation_service.py`) contrôle d'abord la porte
-  de confiance, date les stades par degrés-jours, calcule eau, coût et marge, puis
-  produit le contrat O1.
+de confiance, date les stades par degrés-jours, calcule eau, coût et marge, puis
+produit le contrat O1.
 - **Sentinelle** (`agents/sentinelle.py`) détecte une source périmée, parcourt tout
-  son lineage descendant, marque les assets et écrit un rapport d'impact.
+son lineage descendant, marque les assets et écrit un rapport d'impact.
 
 DataHub est le runtime de contexte central : les services découvrent les assets et
 vérifient le lineage depuis le graphe; la recommandation est refusée si la chaîne
@@ -83,12 +87,12 @@ racine. DataHub n'est requis que pour le
 mode générique ou l'émission du catalogue.
 
 ```bash
-make install       # installe Streamlit, pytest et le SDK DataHub
-make run           # lance l'application (données réelles, sans clé API)
-make fixture       # valide et normalise la fixture hors ligne
-make demo          # lance l'application en mode serveur headless (démo)
-make test          # exécute les tests unitaires
-make clean         # retire rapports et caches Python
+make install # installe Streamlit, pytest et le SDK DataHub
+make run # lance l'application (données réelles, sans clé API)
+make fixture # valide et normalise la fixture hors ligne
+make demo # lance l'application en mode serveur headless (démo)
+make test # exécute les tests unitaires
+make clean # retire rapports et caches Python
 ```
 
 Mode DataHub générique :
@@ -109,12 +113,12 @@ L'application fonctionne par défaut sur la fixture locale, mais l'agent est con
 pour s'appuyer sur un graphe DataHub lorsqu'un GMS est joignable :
 
 ```bash
-export DATAHUB_GMS_URL=http://localhost:8080   # ou votre instance hébergée
-export DATAHUB_TOKEN=                          # token DataHub Platform (facultatif)
-.venv/bin/python catalog/ingest_datahub.py     # ingère datasets + lineage depuis fixtures/graph.json
-.venv/bin/python catalog/ingest_datahub.py --dry-run   # affiche les payloads sans appel réseau
-.venv/bin/python catalog/ingest_skills.py      # enregistre Skills + agent (Agent Context Kit)
-.venv/bin/python catalog/ingest_skills.py --dry-run   # affiche les payloads sans appel réseau
+export DATAHUB_GMS_URL=http://localhost:8080 # ou votre instance hébergée
+export DATAHUB_TOKEN= # token DataHub Platform (facultatif)
+.venv/bin/python catalog/ingest_datahub.py # ingère datasets + lineage depuis fixtures/graph.json
+.venv/bin/python catalog/ingest_datahub.py --dry-run # affiche les payloads sans appel réseau
+.venv/bin/python catalog/ingest_skills.py # enregistre Skills + agent (Agent Context Kit)
+.venv/bin/python catalog/ingest_skills.py --dry-run # affiche les payloads sans appel réseau
 ```
 
 ## Serveur MCP (Model Context Protocol)
@@ -124,20 +128,20 @@ Le serveur GMS expose le même graphe de contexte via **MCP** (streamable HTTP) 
 (fraîcheur, SLA, lineage) et **écrire** dans le graphe (runs, incidents) :
 
 - 12 outils : `list_datasets`, `get_dataset`, `get_lineage`, `freshness_summary`,
-  `emit_run`, `create_incident`, `resolve_incident`, `list_incidents`,
-  `list_skills`, `get_skill`, `register_skill`, `agent_context`
+`emit_run`, `create_incident`, `resolve_incident`, `list_incidents`,
+`list_skills`, `get_skill`, `register_skill`, `agent_context`
 - Agent autonome : `python examples/mcp_agent_demo.py` (boucle supervision :
-  source périmée → lineage aval → incident → run → résolution)
+source périmée → lineage aval → incident → run → résolution)
 - Brancher dans Claude Desktop / MCP Inspector :
 
 ```json
 {
-  "mcpServers": {
-    "terroir": {
-      "url": "https://terroir-context-gms.onrender.com/mcp",
-      "transport": "streamable-http"
-    }
-  }
+"mcpServers": {
+"terroir": {
+"url": "https://terroir-context-gms.onrender.com/mcp",
+"transport": "streamable-http"
+}
+}
 }
 ```
 
@@ -147,20 +151,20 @@ Les agents ne devinent pas : leurs instructions et leur contexte viennent du
 graphe, catalogués comme entités DataHub.
 
 - **Skills** (`urn:li:agentSkill:<id>`, aspect `agentSkillInfo`) : 3 skills
-  opérationnels définis en git au format agentskills.io —
-  `catalog/skills/freshness_sla/SKILL.md` (surveillance fraîcheur/SLA),
-  `catalog/skills/recommandations/SKILL.md` (fiche modèle) et
-  `catalog/skills/codegen/SKILL.md` (génération de code metadata-aware) ;
-  `catalog/ingest_skills.py --dry-run` affiche les payloads,
-  `catalog/ingest_skills.py` les enregistre dans le GMS.
+opérationnels définis en git au format agentskills.io —
+`catalog/skills/freshness_sla/SKILL.md` (surveillance fraîcheur/SLA),
+`catalog/skills/recommandations/SKILL.md` (fiche modèle) et
+`catalog/skills/codegen/SKILL.md` (génération de code metadata-aware) ;
+`catalog/ingest_skills.py --dry-run` affiche les payloads,
+`catalog/ingest_skills.py` les enregistre dans le GMS.
 - **Agent Context Kit** : l'agent lui-même est catalogué
-  (`urn:li:aiAgent:terroir-context-agents`, aspect `aiAgentInfo`) et l'outil MCP
-  `agent_context(datasets)` assemble en un seul objet le bundle de contexte
-  (skills + fraîcheur + lineage) à injecter dans le prompt d'un agent.
+(`urn:li:aiAgent:terroir-context-agents`, aspect `aiAgentInfo`) et l'outil MCP
+`agent_context(datasets)` assemble en un seul objet le bundle de contexte
+(skills + fraîcheur + lineage) à injecter dans le prompt d'un agent.
 - Interopérabilité vérifiée avec le SDK acryl-datahub ≥ 1.7
-  (`datahub.api.entities.agent.agent_skill.AgentSkill`, `Agent`, CLI
-  `datahub agent-skill register`) : les skills écrits via REST sont lus par le
-  SDK et inversement (tests dédiés).
+(`datahub.api.entities.agent.agent_skill.AgentSkill`, `Agent`, CLI
+`datahub agent-skill register`) : les skills écrits via REST sont lus par le
+SDK et inversement (tests dédiés).
 
 Contribution OSS au repo DataHub (bonus du hackathon) : voir
 `contrib/datahub/README.md` — un skill « Freshness & SLA Monitoring » prêt à
@@ -180,7 +184,7 @@ MCP devient la passerelle d'agent vers le graphe réel.
 ```bash
 DATAHUB_GMS_URL=https://votre-instance-datahub.example.com \
 DATAHUB_TOKEN= \
-uvicorn gms.main:app --port 8000        # MCP réel sur /mcp
+uvicorn gms.main:app --port 8000 # MCP réel sur /mcp
 ```
 
 Sans `DATAHUB_GMS_URL`, le serveur retombe sur le graphe mémoire seedé depuis
@@ -189,11 +193,11 @@ Sans `DATAHUB_GMS_URL`, le serveur retombe sur le graphe mémoire seedé depuis
 Une fois connecté :
 
 - l'écran « D'où viennent ces chiffres ? » lit la **fraîcheur réelle des sources
-  dans DataHub** (SLA vs `last_updated`) et affiche l'état de chaque source ;
+dans DataHub** (SLA vs `last_updated`) et affiche l'état de chaque source ;
 - chaque calcul écrit **l'état du run** sur `recommandations_parcelle`
-  (`last_run_status`, `last_run_summary`, `last_run_at`) ;
+(`last_run_status`, `last_run_summary`, `last_run_at`) ;
 - la simulation de panne de station crée un **incident DataHub** sur
-  `hubeau_hydrometrie` ; « Rétablir la station » le résout.
+`hubeau_hydrometrie` ; « Rétablir la station » le résout.
 
 Sans `DATAHUB_GMS_URL`, toutes ces étapes sont ignorées en silence : l'application
 reste utilisable hors ligne, avec le bandeau « mode démonstration locale ».
@@ -210,9 +214,9 @@ contient le référentiel agro-économique et la documentation des sources,
 
 - **Haute** : SLA respectés, lineage complet et aucun risque critique.
 - **Dégradée** : source hors SLA ou référence critique `dire_d_expert`; les chiffres
-  restent visibles avec la cause exacte.
+restent visibles avec la cause exacte.
 - **Insuffisante** : source critique au-delà de deux fois son SLA ou lineage rompu;
-  la liste des cultures est vide et aucun chiffre décisionnel n'est rendu.
+la liste des cultures est vide et aucun chiffre décisionnel n'est rendu.
 
 Le contrôle utilise `last_updated`, `freshness_sla_days`, `niveau_de_preuve`,
 `spatial_coverage` et `licence` de chaque dataset.
@@ -232,23 +236,23 @@ Six mises en scène complètent le tunnel, toutes alimentées par les données d
 calculées (aucune source externe ajoutée) :
 
 - **Graphe de lineage interactif** — DAG SVG des 8 sources jusqu'aux
-  recommandations ; chaque nœud est coloré par sa fraîcheur réelle (SLA vs
-  dernière mise à jour), une fiche `<details>` par entité (SLA, licence, niveau
-  de preuve) et les arêtes « coulent » au défilement.
+recommandations ; chaque nœud est coloré par sa fraîcheur réelle (SLA vs
+dernière mise à jour), une fiche `<details>` par entité (SLA, licence, niveau
+de preuve) et les arêtes « coulent » au défilement.
 - **Console de supervision live** — bouton « Rejouer la supervision de l'agent » :
-  la boucle complète (skills → fraîcheur → propagation du lineage → incident →
-  run → résolution) se rejoue pas à pas ; en mode réel les écritures partent
-  vraiment vers le graphe, sinon en simulation locale.
+la boucle complète (skills → fraîcheur → propagation du lineage → incident →
+run → résolution) se rejoue pas à pas ; en mode réel les écritures partent
+vraiment vers le graphe, sinon en simulation locale.
 - **Carte parcellaire** — parcelles RPG réelles (géométries WGS84) reprojetées en
-  SVG avec les stations Hub'Eau ; parcelle sélectionnée mise en évidence, fiches
-  au clic.
+SVG avec les stations Hub'Eau ; parcelle sélectionnée mise en évidence, fiches
+au clic.
 - **Lame d'eau mensuelle** — graphique SVG des besoins d'irrigation par culture,
-  barres qui poussent au défilement, fenêtre de tension hydrique signalée.
+barres qui poussent au défilement, fenêtre de tension hydrique signalée.
 - **Cascade de panne cinématique** — propagation séquentielle de l'impact.
 - **Mode démo auto** — bouton « ▶ Démo auto (vidéo) » qui enchaîne seul les six
-  écrans du parcours (parcelle → résultat → météo → levers → provenance →
-  détails techniques) avec une parcelle de démonstration hors réseau : idéal
-  pour filmer la soumission Devpost.
+écrans du parcours (parcelle → résultat → météo → levers → provenance →
+détails techniques) avec une parcelle de démonstration hors réseau : idéal
+pour filmer la soumission Devpost.
 
 Tous les modules vivent dans `ui/` (`lineage_graph.py`, `supervision_console.py`,
 `parcel_map.py`, `water_chart.py`) et sont couverts par des tests.
@@ -259,14 +263,14 @@ Un tableau de bord de 18 indicateurs (3 familles × 6), calculés uniquement à
 partir des données déjà produites par l'application — aucun chiffre inventé :
 
 - **Confiance** — conformité SLA des sources (à jour / périmées / inconnues),
-  part de sources en mesure directe, garanties élevées du certificat,
-  fiabilité annoncée de la prévision, cultures au verdict sûr, traçabilité.
+part de sources en mesure directe, garanties élevées du certificat,
+fiabilité annoncée de la prévision, cultures au verdict sûr, traçabilité.
 - **Produit** — cultures comparées, écart de marge (€/ha), besoin en eau
-  cumulé (mm), jours de tension moyens, origine de la parcelle, étapes du
-  parcours décisionnel.
+cumulé (mm), jours de tension moyens, origine de la parcelle, étapes du
+parcours décisionnel.
 - **IA & Agents** — score technique expert (/100), outils MCP exposés (12),
-  skills chargés, incidents ouverts dans le graphe, modèle GR4J et version,
-  runs tracés par exécution.
+skills chargés, incidents ouverts dans le graphe, modèle GR4J et version,
+runs tracés par exécution.
 
 En mode connecté (`DATAHUB_GMS_URL`), les valeurs de graphe (fraîcheur,
 skills, incidents) sont lues dans DataHub ; sinon le calcul local reproduit
